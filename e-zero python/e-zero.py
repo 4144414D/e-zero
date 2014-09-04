@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-GitHub:https://github.com/4144414D/e-zero 
+GitHub:htps://github.com/4144414D/e-zero 
 Email:adam@nucode.co.uk
 
 Usage:
@@ -16,9 +16,9 @@ Options:
   -f, --force             Do not check if paths are write protected.
   -c, --copy              Only copy the files, do not verify them.
   -m PATH, --master PATH  The master path for consolidation. 
-  -b PATH, --backup PATH  The backup path for consolidation. 
+  -b PATH, --backup PATH  The backup path for consolidation.
 """
-VERSION="""e-zero: BETA 0.0.1"""
+VERSION="BETA 0.0.1"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -28,26 +28,22 @@ import subprocess
 import time
 import sys
 
-def check_ftki():
+def print_list(name,list_data):
+        print
+        print name
+        for item in list_data:
+                print item
+
+def check_dependency(command,name,target):
         null = open(os.devnull,'w')
         result = 0
         try:
                 result = subprocess.call('ftkimager.exe --list-drives', stdout=null, stderr=null)
         except:
-                result = 1
-        if result != 0:
-                print "ERROR: FTK Imager CLI in not installed or accessible from path."
-                exit(1)
-
-def check_robocopy():
-        null = open(os.devnull,'w')
-        result = 0
-        try:
-                result = subprocess.call('robocopy /?', stdout=null, stderr=null)
-        except:
-                result = 1
-        if result != 0:
-                print "ERROR: robocopy in not installed or accessible from path."
+                result = -1
+        if result != target:
+                print time.strftime('%Y-%m-%d %H:%M:%S'),
+                print "ERROR: " + name + "in not installed or accessible from path."
                 exit(1)
         
 def find_files_helper(path, pattern='*.e01'):
@@ -191,25 +187,13 @@ def verify(arguments):
         print len(sorted_paths)
         print "Total size:\t",
         print bytes2human(total_file_size(files))
+
         for image in files:
                 p = Process(target = verify_image, args = (source_locks, results_queue, image, ))		
                 p.start()
-
-        waiting = True
-        display = 0
-        while waiting:
-                if len(active_children()) == 0:
-			waiting = False
-		else:
-                        if display > 59:
-                                sys.stdout.flush()
-                                print len(active_children()),
-                                print "images remaining"
-                                display = 0
-                        else:
-                                display = display + 1
-                                time.sleep(1)   
-
+                
+        while len(active_children()) > 0: time.sleep(1)
+ 
         verified = []
         failed = []
         while not results_queue.empty():
@@ -218,15 +202,9 @@ def verify(arguments):
                         verified.append(result[2])
                 else:
                         failed.append(result[2])
-        
-        print
-        print 'VERIFIED Images'
-        for image in verified:
-                print image
-        print
-        print 'FAILED Images'
-        for image in failed:
-                print image
+
+        if len(verified) > 0: print_list('VERIFIED Images', verified)
+        if len(failed) > 0: print_list('FAILED Images', failed_to_copy)
 
 ######################################################################################
 
@@ -238,12 +216,12 @@ def consolidate_worker(dest_lock, source_locks, dest, image, results_queue):
                         time.sleep(0.1) # unable to get lock, so I must wait
                 else:
                         if not source_locks[root].acquire(False):
-                                dest_lock.release()
+                                dest_lock.release() # make sure my dest lock is avaible for others so that I don't block
                                 time.sleep(0.1) # unable to get lock, so I must wait
                         else:
                                 try:
                                         null = open(os.devnull,'w')
-                                        destination_path = dest + '\\' + os.path.basename(image)
+                                        destination_path = dest + '\\' + os.path.basename(image)[:-4]
                                         print time.strftime('%Y-%m-%d %H:%M:%S'),
                                         print 'robocopy "' + os.path.dirname(image) + '" "' + destination_path + '" /r:2 /w:0 /z'
                                         result = subprocess.call('robocopy "' + os.path.dirname(image) + '" "' + destination_path + '" /r:2 /w:0 /z', stdout=null, stderr=null)
@@ -259,29 +237,19 @@ def consolidate_drive(sources, dest, results_queue, source_locks, copy=False):
         for image in sources:
                 p = Process(target = consolidate_worker, args = (dest_lock, source_locks, dest, image, results_queue,))		
                 p.start()
-        
-        waiting = True
-        while waiting: #wait until all files have copied
-                if len(active_children()) == 0:
-                        waiting = False
-                else:
-                        time.sleep(1)   
+
+        while len(active_children()) > 0: time.sleep(1) #wait until all files have copied  
 	if not copy:
 		#verify all files
 		dest_lock_dict = get_roots([dest])
 		for lock in dest_lock_dict:
 				dest_lock_dict[lock] = Lock()
 		for image in sources:
-				image_path = dest + '\\' + os.path.basename(image) + '\\' + os.path.basename(image)
+				image_path = dest + '\\' + os.path.basename(image)[:-4] + '\\' + os.path.basename(image)
 				p = Process(target = verify_image, args = (dest_lock_dict, results_queue, image_path, ))		
 				p.start()
-		waiting = True
-		while waiting:
-				if len(active_children()) == 0:
-						waiting = False
-				else:
-						time.sleep(1) 
 		
+		while len(active_children()) > 0: time.sleep(1) #wait until all files are verified
 
 							
 def consolidate(arguments):
@@ -315,11 +283,7 @@ def consolidate(arguments):
                 p = Process(target = consolidate_drive, args = (files, drive, results_queue, source_locks, arguments['--copy']))		
                 p.start()
 
-        waiting = True
-        display = 0
-        while waiting:
-                if len(active_children()) == 0:
-                        waiting = False
+        while len(active_children()) > 0: time.sleep(1)
 						
 	verified = []
 	failed_to_verify = []
@@ -334,23 +298,9 @@ def consolidate(arguments):
                         else:
                                 failed_to_verify.append(result[2])
 							
-	if len(verified) > 0:
-                print
-                print 'VERIFIED Images'
-                for image in verified:
-                        print image
-                        
-        if len(failed_to_copy) > 0:
-                print
-                print 'FAILED to copy Images'
-                for image in failed_to_copy:
-                        print image
-                
-        if len(failed_to_verify) > 0: 
-                print
-                print 'FAILED to verify Images'
-                for image in failed_to_verify:
-                        print image
+	if len(verified) > 0: print_list('VERIFIED Images', verified)
+        if len(failed_to_copy) > 0: print_list('FAILED to copy Images', failed_to_copy)
+        if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
 
 ######################################################################################
 
@@ -471,7 +421,7 @@ def list_files(arguments):
         check_for_name_clashes(files)                
 
 if __name__ == '__main__':
-        check_ftki()
+        check_dependency('ftkimager.exe --list-drives','FTK Imager CLI',0)
         arguments = docopt(__doc__, version=VERSION)
         if arguments['verify']:
                 verify(arguments)
@@ -482,3 +432,4 @@ if __name__ == '__main__':
         else:
                 print 'Something went wrong, these values will help with debugging:'
                 print arguments
+        exit()
