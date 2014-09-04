@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-GitHub:htps://github.com/4144414D/e-zero 
+GitHub:https://github.com/4144414D/e-zero 
 Email:adam@nucode.co.uk
 
 Usage:
