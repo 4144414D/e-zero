@@ -96,45 +96,32 @@ def check_paths_exist(paths):
                                 print '- BAD'
                 exit(1)
 
-def check_writeable_helper(path):
-        """This function is used to check if we can write to a single file path"""      
-        return os.access(path, os.W_OK)
-
-def check_readonly(paths):
-        """This function is used to check if we can only read from all paths in a list of paths"""
-        #I should be clever and combine with check_writeable
-        result = True
-        for path in paths:
-                result = result and not check_writeable_helper(path)
-        if not result:
-                print "ERROR: Not all folders are read only"
-                for item in paths:
-                        print item,
-                        if not check_paths_exist_helper([item]):
-                                print '- Read Only'
-
-                        else:
-                                print '- Read/Write'
-                print "\nUse the -f command to force e-zero to run"
-                exit(1)
-        return result
-
-
-def check_writeable(paths):
+def check_writeable_helper(path,mode='RW'):
+        """This function is used to check if we can write to a single file path"""
+        if mode == 'RW':
+                return os.access(path, os.W_OK) and os.access(path, os.R_OK)
+        elif mode == 'RO':
+                if (not os.access(path, os.W_OK)) and os.access(path, os.R_OK):
+                        return True
+                else:
+                        return False
+                
+def check_writeable(paths,mode='RW'):
         """This function is used to check if we can write to all paths in a list of paths"""
-        #I should be clever and combine with check_readonly
         result = True
         for path in paths:
-                result = result and check_writeable_helper(path)
+                result = result and check_writeable_helper(path,mode)
         if not result:
-                print "ERROR: Not all folders are writeable"
+                if mode == 'RW':
+                        print "ERROR: Not all folders are writeable"
+                elif mode == 'RO':
+                        print "ERROR: Not all folders are read only"
                 for item in paths:
                         print item,
-                        if check_paths_exist_helper([item]):
-                                print '- Read Only'
-
-                        else:
+                        if check_writeable_helper(item):
                                 print '- Read/Write'
+                        else:
+                                print '- Read Only'
                 exit(1)       
         return result
 
@@ -176,7 +163,7 @@ def verify_image(source_locks, results_queue, image):
 def verify(arguments):
         """This is the main function to deal with the verify command"""
         check_paths_exist(arguments['<source>'])
-        if not arguments['--force']: check_readonly(arguments['<source>'])
+        if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
         files = find_files(arguments['<source>'])
         source_locks = {}
         results_queue = Queue()
@@ -242,7 +229,7 @@ def consolidate_drive(sources, dest, results_queue, source_locks, copy=False):
 def consolidate(arguments):
         """This is the main function to deal with the consolidate command"""
         check_paths_exist(arguments['<source>'] + [arguments['--master']] + [arguments['--backup']])
-        if not arguments['--force']: check_readonly(arguments['<source>'])
+        if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
         files = find_files(arguments['<source>'])
         sorted_sources = get_roots(files)
         destinations = [arguments['--master']]
@@ -335,7 +322,8 @@ def total_file_size(files):
         return size
 
 def list_files(arguments):
-        if not arguments['--force']: check_readonly(arguments['<source>'])
+        check_paths_exist(arguments['<source>'])
+        if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
         files = find_files(arguments['<source>'])
         files.sort()
         for image in files: print image
