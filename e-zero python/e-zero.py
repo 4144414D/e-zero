@@ -34,14 +34,14 @@ def print_list(name,list_data):
         for item in list_data:
                 print item
 
-def print_totals(files,dest=False):
+def print_totals(files,sorted_dest=False):
         print
         print "Total images:\t\t",
         print len(files)
         print "Total sources:\t\t",
         sorted_paths = get_roots(files)
         print len(sorted_paths)
-        if dest:
+        if sorted_dest:
                 print "Total destinations:\t",
                 print len(sorted_dest)
         print "Total size:\t\t",
