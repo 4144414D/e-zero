@@ -6,7 +6,7 @@ Email:adam@nucode.co.uk
 Usage:
   e-zero verify <source>... [-f]
   e-zero consolidate <source>... --master=<path> [--backup=<path>] [-fc]
-  e-zero list <source>...
+  e-zero list <source>... [-f]
   e-zero --version 
   e-zero --help
 
@@ -34,11 +34,24 @@ def print_list(name,list_data):
         for item in list_data:
                 print item
 
+def print_totals(files,dest=False):
+        print
+        print "Total images:\t\t",
+        print len(files)
+        print "Total sources:\t\t",
+        sorted_paths = get_roots(files)
+        print len(sorted_paths)
+        if dest:
+                print "Total destinations:\t",
+                print len(sorted_dest)
+        print "Total size:\t\t",
+        print bytes2human(total_file_size(files))
+
 def check_dependency(command,name,target):
         null = open(os.devnull,'w')
         result = 0
         try:
-                result = subprocess.call('ftkimager.exe --list-drives', stdout=null, stderr=null)
+                result = subprocess.call(command, stdout=null, stderr=null)
         except:
                 result = -1
         if result != target:
@@ -57,7 +70,7 @@ def find_files_helper(path, pattern='*.e01'):
 def find_files(paths, pattern='*.e01'):
         files = []
         for path in paths:
-                files = (files + (find_files_helper(path)))
+                files = (files + (find_files_helper(path,pattern)))
         files = list(set(files))
         return files
 
@@ -81,7 +94,7 @@ def check_paths_exist(paths):
                                 print '- OKAY'
                         else:
                                 print '- BAD'
-                exit()
+                exit(1)
 
 def check_writeable_helper(path):
         """This function is used to check if we can write to a single file path"""      
@@ -92,9 +105,7 @@ def check_readonly(paths):
         #I should be clever and combine with check_writeable
         result = True
         for path in paths:
-                #print path
                 result = result and not check_writeable_helper(path)
-
         if not result:
                 print "ERROR: Not all folders are read only"
                 for item in paths:
@@ -104,9 +115,8 @@ def check_readonly(paths):
 
                         else:
                                 print '- Read/Write'
-                print
-                print "use the -f command to force e-zero to run"
-                exit()
+                print "\nUse the -f command to force e-zero to run"
+                exit(1)
         return result
 
 
@@ -115,9 +125,7 @@ def check_writeable(paths):
         #I should be clever and combine with check_readonly
         result = True
         for path in paths:
-                #print path
                 result = result and check_writeable_helper(path)
-
         if not result:
                 print "ERROR: Not all folders are writeable"
                 for item in paths:
@@ -127,9 +135,7 @@ def check_writeable(paths):
 
                         else:
                                 print '- Read/Write'
-                exit()
-
-        
+                exit(1)       
         return result
 
 def get_roots(paths):
@@ -149,8 +155,6 @@ def get_size(path):
                 if os.path.isfile(f):
                         result = result + os.path.getsize(f) 
         return result
-
-######################################################################################
 
 def verify_image(source_locks, results_queue, image):
         finished = False
@@ -174,26 +178,16 @@ def verify(arguments):
         check_paths_exist(arguments['<source>'])
         if not arguments['--force']: check_readonly(arguments['<source>'])
         files = find_files(arguments['<source>'])
-
         source_locks = {}
         results_queue = Queue()
         sorted_paths = get_roots(files)
         for drive in sorted_paths:
                 source_locks[drive] = Lock()
-
-        print "Total images:\t",
-        print len(files)
-        print "Total sources:\t",
-        print len(sorted_paths)
-        print "Total size:\t",
-        print bytes2human(total_file_size(files))
-
+        print_totals(files)
         for image in files:
                 p = Process(target = verify_image, args = (source_locks, results_queue, image, ))		
                 p.start()
-                
-        while len(active_children()) > 0: time.sleep(1)
- 
+        while len(active_children()) > 0: time.sleep(1) 
         verified = []
         failed = []
         while not results_queue.empty():
@@ -202,11 +196,8 @@ def verify(arguments):
                         verified.append(result[2])
                 else:
                         failed.append(result[2])
-
         if len(verified) > 0: print_list('VERIFIED Images', verified)
-        if len(failed) > 0: print_list('FAILED Images', failed_to_copy)
-
-######################################################################################
+        if len(failed) > 0: print_list('FAILED Images', failed)
 
 def consolidate_worker(dest_lock, source_locks, dest, image, results_queue):
         finished = False
@@ -237,10 +228,8 @@ def consolidate_drive(sources, dest, results_queue, source_locks, copy=False):
         for image in sources:
                 p = Process(target = consolidate_worker, args = (dest_lock, source_locks, dest, image, results_queue,))		
                 p.start()
-
         while len(active_children()) > 0: time.sleep(1) #wait until all files have copied  
-	if not copy:
-		#verify all files
+	if not copy: #verify all files
 		dest_lock_dict = get_roots([dest])
 		for lock in dest_lock_dict:
 				dest_lock_dict[lock] = Lock()
@@ -248,17 +237,14 @@ def consolidate_drive(sources, dest, results_queue, source_locks, copy=False):
 				image_path = dest + '\\' + os.path.basename(image)[:-4] + '\\' + os.path.basename(image)
 				p = Process(target = verify_image, args = (dest_lock_dict, results_queue, image_path, ))		
 				p.start()
-		
 		while len(active_children()) > 0: time.sleep(1) #wait until all files are verified
-
-							
+		
 def consolidate(arguments):
         """This is the main function to deal with the consolidate command"""
         check_paths_exist(arguments['<source>'] + [arguments['--master']] + [arguments['--backup']])
         if not arguments['--force']: check_readonly(arguments['<source>'])
         files = find_files(arguments['<source>'])
         sorted_sources = get_roots(files)
-
         destinations = [arguments['--master']]
         if arguments['--backup'] != None: destinations.append(arguments['--backup'])
         check_writeable(destinations)
@@ -266,25 +252,13 @@ def consolidate(arguments):
         source_locks = {}
         for drive in sorted_sources:
                 source_locks[drive] = Lock()
-        
-        print "Total images:\t\t",
-        print len(files)
-        print "Total sources:\t\t",
-        print len(sorted_sources)
-        print "Total destinations:\t",
-        print len(sorted_dest)
-        print "Total size:\t\t",
-        print bytes2human(total_file_size(files))
-        print
+        print_totals(files,sorted_sources)
         check_for_name_clashes(files, True)
         results_queue = Queue()
-
         for drive in destinations:
                 p = Process(target = consolidate_drive, args = (files, drive, results_queue, source_locks, arguments['--copy']))		
                 p.start()
-
-        while len(active_children()) > 0: time.sleep(1)
-						
+        while len(active_children()) > 0: time.sleep(1)			
 	verified = []
 	failed_to_verify = []
 	failed_to_copy = []
@@ -296,13 +270,10 @@ def consolidate(arguments):
                         if result[1] == 0:
                                 verified.append(result[2])
                         else:
-                                failed_to_verify.append(result[2])
-							
+                                failed_to_verify.append(result[2])	
 	if len(verified) > 0: print_list('VERIFIED Images', verified)
         if len(failed_to_copy) > 0: print_list('FAILED to copy Images', failed_to_copy)
         if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
-
-######################################################################################
 
 def check_for_name_clashes(files, mode=False):
         unique_names = set()
@@ -313,31 +284,27 @@ def check_for_name_clashes(files, mode=False):
         for unique_name in unique_names:
                 clashes[unique_name] = 0
                 sorted_unique_names.append(unique_name)
-        sorted_unique_names.sort()
-        
+        sorted_unique_names.sort()        
         for f in files:
                 basename = os.path.basename(f)
                 clashes[basename] = clashes[basename] + 1
-
-
         if len(unique_names) !=  len(files):
                 if mode:
-                        print "ERROR - not all image names are unique"
+                        print "\nERROR: Not all image names are unique"
                 else:
-                        print "WARNING: Not all image names are unique"
+                        print "\nWARNING: Not all image names are unique"
                 for clash in sorted_unique_names:
                         if clashes[clash] > 1:
                                 print clash,
                                 print "appears",
                                 print clashes[clash],
                                 print "times"
-                        
                 if mode:
                         print "\nPlease remove or rename these images so that they are named uniquely"
                         exit(1)
-
-# see: http://goo.gl/kTQMs
+                        
 SYMBOLS = {
+#http://goo.gl/kTQMs
     'customary'     : ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
     'customary_ext' : ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta', 'exa',
                        'zetta', 'iotta'),
@@ -346,44 +313,8 @@ SYMBOLS = {
                        'zebi', 'yobi'),
 }
 
-#http://stackoverflow.com/questions/13343700/bytes-to-human-readable-and-back-without-data-loss
 def bytes2human(n, format='%(value).1f %(symbol)s', symbols='customary'):
-    """
-    Convert n bytes into a human readable string based on format.
-    symbols can be either "customary", "customary_ext", "iec" or "iec_ext",
-    see: http://goo.gl/kTQMs
-
-      >>> bytes2human(0)
-      '0.0 B'
-      >>> bytes2human(0.9)
-      '0.0 B'
-      >>> bytes2human(1)
-      '1.0 B'
-      >>> bytes2human(1.9)
-      '1.0 B'
-      >>> bytes2human(1024)
-      '1.0 K'
-      >>> bytes2human(1048576)
-      '1.0 M'
-      >>> bytes2human(1099511627776127398123789121)
-      '909.5 Y'
-
-      >>> bytes2human(9856, symbols="customary")
-      '9.6 K'
-      >>> bytes2human(9856, symbols="customary_ext")
-      '9.6 kilo'
-      >>> bytes2human(9856, symbols="iec")
-      '9.6 Ki'
-      >>> bytes2human(9856, symbols="iec_ext")
-      '9.6 kibi'
-
-      >>> bytes2human(10000, "%(value).1f %(symbol)s/sec")
-      '9.8 K/sec'
-
-      >>> # precision can be adjusted by playing with %f operator
-      >>> bytes2human(10000, format="%(value).5f %(symbol)s")
-      '9.76562 K'
-    """
+#http://stackoverflow.com/questions/13343700/bytes-to-human-readable-and-back-without-data-loss
     n = int(n)
     if n < 0:
         raise ValueError("n < 0")
@@ -400,24 +331,15 @@ def bytes2human(n, format='%(value).1f %(symbol)s', symbols='customary'):
 def total_file_size(files):
         """find total file size for image files"""
         size = 0
-        for f in files:              
-                size = size + get_size(os.path.dirname(f))
+        for f in files: size = size + get_size(os.path.dirname(f))
         return size
 
 def list_files(arguments):
+        if not arguments['--force']: check_readonly(arguments['<source>'])
         files = find_files(arguments['<source>'])
         files.sort()
-        for image in files:
-                print image
-        print
-        print "Total images:\t",
-        print len(files)
-        print "Total sources:\t",
-        sorted_paths = get_roots(files)
-        print len(sorted_paths)
-        print "Total size:\t",
-        print bytes2human(total_file_size(files))
-        print
+        for image in files: print image
+        print_totals(files)
         check_for_name_clashes(files)                
 
 if __name__ == '__main__':
