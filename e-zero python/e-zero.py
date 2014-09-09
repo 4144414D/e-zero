@@ -239,7 +239,7 @@ def consolidate(arguments):
         source_locks = {}
         for drive in sorted_sources:
                 source_locks[drive] = Lock()
-        print_totals(files,sorted_sources)
+        print_totals(files,sorted_dest)
         check_for_name_clashes(files, True)
         results_queue = Queue()
         for drive in destinations:
