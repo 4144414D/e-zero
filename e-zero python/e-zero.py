@@ -27,6 +27,7 @@ import fnmatch
 import subprocess
 import time
 import sys
+import shutil
 
 def print_list(name,list_data):
         print
@@ -198,12 +199,14 @@ def consolidate_worker(dest_lock, source_locks, dest, image, results_queue):
                                 time.sleep(0.1) # unable to get lock, so I must wait
                         else:
                                 try:
-                                        null = open(os.devnull,'w')
-                                        destination_path = dest + '\\' + os.path.basename(image)[:-4]
+                                        source_path = os.path.dirname(image)
+                                        destination_path = os.path.join(dest, os.path.basename(image)[:-4])
                                         print time.strftime('%Y-%m-%d %H:%M:%S'),
-                                        print 'robocopy "' + os.path.dirname(image) + '" "' + destination_path + '" /r:2 /w:0 /z'
-                                        result = subprocess.call('robocopy "' + os.path.dirname(image) + '" "' + destination_path + '" /r:2 /w:0 /z', stdout=null, stderr=null)
-                                        results_queue.put(['copy',result, destination_path])
+                                        print 'copy ' + source_path + ' > ' + destination_path
+                                        shutil.copytree(source_path,destination_path)
+                                        results_queue.put(['copy',True, destination_path])
+                                except:
+                                        results_queue.put(['copy',False, destination_path])
                                 finally:
                                         source_locks[root].release()
                                         dest_lock.release()
@@ -221,7 +224,7 @@ def consolidate_drive(sources, dest, results_queue, source_locks, copy=False):
 		for lock in dest_lock_dict:
 				dest_lock_dict[lock] = Lock()
 		for image in sources:
-				image_path = dest + '\\' + os.path.basename(image)[:-4] + '\\' + os.path.basename(image)
+				image_path = os.path.join(dest,os.path.basename(image)[:-4],os.path.basename(image))
 				p = Process(target = verify_image, args = (dest_lock_dict, results_queue, image_path, ))		
 				p.start()
 		while len(active_children()) > 0: time.sleep(1) #wait until all files are verified
@@ -251,7 +254,7 @@ def consolidate(arguments):
 	failed_to_copy = []
         while not results_queue.empty():
                 result = results_queue.get()
-		if (result[0] == 'copy') and (result[1] in ['0','1']):
+		if (result[0] == 'copy') and (not result[1]):
                         failed_to_copy.append(result[2])
                 elif result[0] == 'verify':
                         if result[1] == 0:

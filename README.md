@@ -2,7 +2,7 @@ e-zero
 ======
 Manage e01 files. Consolidate after a collection, duplicate, and verify. 
 
-Requires python2.7, docopt, ftk imager CLI, and robocopy. 
+Requires python2.7, docopt, and ftk imager CLI.
 
 Installing
 ==========
@@ -16,7 +16,4 @@ Installing
 
 	a) Simple copy and paste all files for FTK Imager CLI in C:\Windows
 	
-	b) Modify your PATH variable to include FTK Imager CLI. 
-
-	
-If using Windows XP or lower, you will also need to install robocopy. http://www.microsoft.com/en-gb/download/details.aspx?id=17657
+	b) Modify your PATH variable to include FTK Imager CLI.
