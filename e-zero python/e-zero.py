@@ -4,9 +4,9 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
-  e-zero verify <source>... [-f]
-  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-fc]
-  e-zero list <source>... [-f]
+  e-zero verify <source>... [-fv]
+  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-fcv]
+  e-zero list <source>... [-fv]
   e-zero --version 
   e-zero --help
 
@@ -17,6 +17,7 @@ Options:
   -c, --copy              Only copy the files, do not verify them.
   -m PATH, --master PATH  The master path for consolidation. 
   -b PATH, --backup PATH  The backup path for consolidation.
+  -v, --verbose           Prints verbose log file for debugging. 
 """
 VERSION="BETA 0.0.2"
 
@@ -28,14 +29,17 @@ import subprocess
 import time
 import sys
 import shutil
+import logging 
 
 def print_list(name,list_data):
+	logger = logging.getLogger('e-zero.print_list')
 	print
 	print name
 	for item in list_data:
 		print item
 
 def print_totals(files,sorted_dest=False):
+	logger = logging.getLogger('e-zero.print_totals')
 	print
 	print "Total images:\t\t",
 	print len(files)
@@ -50,6 +54,7 @@ def print_totals(files,sorted_dest=False):
         print
 
 def check_dependency(command,name,target):
+	logger = logging.getLogger('e-zero.check_dependency')
 	null = open(os.devnull,'w')
 	result = 0
 	try:
@@ -62,6 +67,7 @@ def check_dependency(command,name,target):
 		exit(1)
 	
 def find_files_helper(path, pattern='*.e01'):
+	logger = logging.getLogger('e-zero.find_files_helper')
 	"""This function is used to find the location of all files matching with a extension recursively inside the folder listed in path"""
 	matched_files = []      
 	for path, dirs, files in os.walk(os.path.abspath(path)):
@@ -70,6 +76,7 @@ def find_files_helper(path, pattern='*.e01'):
 	return matched_files
 
 def find_files(paths, pattern='*.e01'):
+	logger = logging.getLogger('e-zero.find_files')
 	files = []
 	for path in paths:
 		files = (files + (find_files_helper(path,pattern)))
@@ -77,9 +84,11 @@ def find_files(paths, pattern='*.e01'):
 	return files
 
 def get_root(path):
+	logger = logging.getLogger('e-zero.get_root')
 	return path[0].upper()
 
 def get_roots(paths):
+	logger = logging.getLogger('e-zero.get_roots')
 	roots = set()
 	for image in paths:
 		roots.add(get_root(image))
@@ -89,6 +98,7 @@ def get_roots(paths):
 	return roots_dict
         
 def check_paths_exist_helper(paths):
+	logger = logging.getLogger('e-zero.check_paths_exist_helper')
 	"""This function is used to check if all folders exist for a list of paths"""
 	result = True   
 	for path in paths:      
@@ -96,6 +106,7 @@ def check_paths_exist_helper(paths):
 	return result
 
 def check_paths_exist(paths):
+	logger = logging.getLogger('e-zero.check_paths_exist')
 	"""This function is used to check if all folders exist for a list of paths"""
 	if not check_paths_exist_helper(paths):
 		print "ERROR: Not all folders exist."
@@ -108,6 +119,7 @@ def check_paths_exist(paths):
 		exit(1)
 
 def check_writeable_helper(path,mode='RW'):
+	logger = logging.getLogger('e-zero.check_writeable_helper')
 	"""This function is used to check if we can write to a single file path"""
 	if mode == 'RW':
 		return os.access(path, os.W_OK) and os.access(path, os.R_OK)
@@ -118,6 +130,7 @@ def check_writeable_helper(path,mode='RW'):
 			return False
 		
 def check_writeable(paths,mode='RW'):
+	logger = logging.getLogger('e-zero.check_writeable')
 	"""This function is used to check if we can write to all paths in a list of paths"""
 	result = True
 	for path in paths:
@@ -137,6 +150,7 @@ def check_writeable(paths,mode='RW'):
 	return result
         
 def check_for_name_clashes(files, mode=False):
+	logger = logging.getLogger('e-zero.check_for_name_clashes')
 	unique_names = set()
 	for f in files:
 		unique_names.add(os.path.basename(f))
@@ -165,6 +179,7 @@ def check_for_name_clashes(files, mode=False):
 			exit(1)
 
 def get_size(path):
+	logger = logging.getLogger('e-zero.get_size')
 	result = 0
 	base = path
 	for f in os.listdir(path):
@@ -191,18 +206,21 @@ def bytes2human(n, format='%(value).1f %(symbol)s', symbols='customary'):
     return format % dict(symbol=symbols[0], value=n)
 
 def total_file_size(files):
+	logger = logging.getLogger('e-zero.total_file_size')
 	"""find total file size for image files"""
 	size = 0
 	for f in files: size = size + get_size(os.path.dirname(f))
 	return size
 
 def create_drive_locks(roots):
+	logger = logging.getLogger('e-zero.create_drive_locks')
 	drive_locks = {}
 	for drive in roots:
 		drive_locks[drive] = Lock()
 	return drive_locks
         
 def list_files(arguments):
+	logger = logging.getLogger('e-zero.list_files')
 	check_paths_exist(arguments['<source>'])
 	if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
 	files = find_files(arguments['<source>'])
@@ -212,31 +230,36 @@ def list_files(arguments):
 	check_for_name_clashes(files)  
 
 def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue):
+	logger = logging.getLogger('e-zero.copy_worker')
 	try:
-                #move to using xcopy instead
+                null = open(os.devnull,'w')
                 source_path = os.path.dirname(job_source)
                 destination_path = os.path.dirname(job_dest)
 		print time.strftime('%Y-%m-%d %H:%M:%S'),
-		print 'copy ' + source_path + ' > ' + destination_path
-		shutil.copytree(source_path,destination_path)
-                results_queue.put(['copy',1, job_dest]) #passed
+                print 'xcopy "' + source_path + '" "' + destination_path + '" /SYIQ'
+                result = subprocess.call('xcopy "%s" "%s" /SYIQ' % (source_path, destination_path), stdout=null, stderr=null)
+                results_queue.put(['copy',result, job_dest])
 	except:
-		results_queue.put(['copy',-1, job_dest]) #failed
+		results_queue.put(['copy',-1, job_dest]) 
 	finally:
 		source_locks[get_root(job_source)].release()
 		dest_locks[get_root(job_dest)].release()
 	
 def verify_worker(dest_locks, job_dest, results_queue):
+	logger = logging.getLogger('e-zero.verify_worker')
         try:
 		null = open(os.devnull,'w')
 		print time.strftime('%Y-%m-%d %H:%M:%S'),
 		print 'ftkimager.exe --verify "' + job_dest + '"' 
 		result = subprocess.call('ftkimager.exe --verify "' + job_dest + '"', stdout=null, stderr=null)
 		results_queue.put(['verify',result, job_dest])
+        except:
+		results_queue.put(['verify',-1, job_dest])
 	finally:
 		dest_locks[get_root(job_dest)].release()
 	
 def dispatcher(copy = False, verify = False, sources=[], destinations = []):
+	logger = logging.getLogger('e-zero.dispatcher')
 	source_roots = get_roots(sources)
 	destination_roots = get_roots(destinations)
 	source_locks = create_drive_locks(source_roots)
@@ -244,7 +267,6 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
         results_queue = Queue()
 	if copy: 
 		copy_jobs = []
-                
                 if verify: destinations_to_verify = []
 		for source in sources: #create jobs that need to run
                         basename = os.path.basename(source)
@@ -292,7 +314,7 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
 	failed_to_copy = []
 	while not results_queue.empty():
 		result = results_queue.get()
-		if (result[0] == 'copy') and (result[1] == -1):
+		if (result[0] == 'copy') and (result[1] != 0):
 			failed_to_copy.append(result[2])
 		elif result[0] == 'verify':
 			if result[1] == 0:
@@ -304,6 +326,7 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
 	if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
 
 def verify(arguments):
+	logger = logging.getLogger('e-zero.verify')
 	"""This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
 	check_paths_exist(arguments['<source>'])
 	if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
@@ -313,6 +336,7 @@ def verify(arguments):
 	dispatcher(False,True,[],files)
 		
 def consolidate(arguments):
+	logger = logging.getLogger('e-zero.consolidate')
 	"""This is the main function to deal with the consolidate command"""
 	check_paths_exist(arguments['<source>'] + [arguments['--master']] + [arguments['--backup']])
 	if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
@@ -326,8 +350,23 @@ def consolidate(arguments):
         dispatcher(True,not arguments['--copy'],source_files,destinations)
 
 if __name__ == '__main__':
-	check_dependency('ftkimager.exe --list-drives','FTK Imager CLI',0)
-	arguments = docopt(__doc__, version=VERSION)
+        logger = logging.getLogger('e-zero')
+        arguments = docopt(__doc__, version=VERSION)
+	if arguments['--verbose']:
+                print "Verbose mode is not implemented yet.... watch this space"
+                logger.setLevel(logging.DEBUG)
+                fh = logging.FileHandler('processing.log')
+                fh.setLevel(logging.DEBUG)
+                fh_formatter = logging.Formatter('%(asctime)-5s - %(name)-30s - %(message)s')
+                fh.setFormatter(fh_formatter)
+                #logger.addHandler(fh)
+                ch = logging.StreamHandler()
+                ch.setLevel(logging.INFO)
+                ch_formatter = logging.Formatter('%(asctime)s %(message)s')
+                ch.setFormatter(ch_formatter)
+                #logger.addHandler(ch)
+        
+        check_dependency('ftkimager.exe --list-drives','FTK Imager CLI',0)
 	if arguments['verify']:
 		verify(arguments)
 	elif arguments['consolidate']:
