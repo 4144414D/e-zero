@@ -5,7 +5,7 @@ Manage e01 files. Consolidate after a collection, duplicate, and verify.
 Requires python2.7, docopt, and ftk imager CLI.
 
 Installing
-==========
+----------
 1) Download and install python2.7 https://www.python.org/download
 
 2) Download and install docopt https://github.com/docopt/docopt
