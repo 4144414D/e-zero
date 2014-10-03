@@ -4,22 +4,21 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
-  e-zero verify <source>... [-fv]
-  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-fcv]
-  e-zero list <source>... [-fv]
+  e-zero verify <source>... [-v]
+  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-cv]
+  e-zero list <source>... [-v]
   e-zero --version 
   e-zero --help
 
 Options:
-  -h --help               Show this screen.
+  -h, --help               Show this screen.
   --version               Show the version.
-  -f, --force             Do not check if paths are write protected.
   -c, --copy              Only copy the files, do not verify them.
   -m PATH, --master PATH  The master path for consolidation. 
   -b PATH, --backup PATH  The backup path for consolidation.
   -v, --verbose           Prints verbose log file for debugging. 
 """
-VERSION="BETA 0.0.2"
+VERSION="BETA 0.0.3"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -97,58 +96,6 @@ def get_roots(paths):
         roots_dict[root] = []
     return roots_dict
         
-def check_paths_exist_helper(paths):
-    logger = logging.getLogger('e-zero.check_paths_exist_helper')
-    """This function is used to check if all folders exist for a list of paths"""
-    result = True   
-    for path in paths:      
-        result = result and os.path.isdir(os.path.abspath(path))
-    return result
-
-def check_paths_exist(paths):
-    logger = logging.getLogger('e-zero.check_paths_exist')
-    """This function is used to check if all folders exist for a list of paths"""
-    if not check_paths_exist_helper(paths):
-        print "ERROR: Not all folders exist."
-        for item in paths:
-            print item,
-            if check_paths_exist_helper([item]):
-                print '- OKAY'
-            else:
-                print '- BAD'
-        exit(1)
-
-def check_writeable_helper(path,mode='RW'):
-    logger = logging.getLogger('e-zero.check_writeable_helper')
-    """This function is used to check if we can write to a single file path"""
-    if mode == 'RW':
-        return os.access(path, os.W_OK) and os.access(path, os.R_OK)
-    elif mode == 'RO':
-        if (not os.access(path, os.W_OK)) and os.access(path, os.R_OK):
-            return True
-        else:
-            return False
-        
-def check_writeable(paths,mode='RW'):
-    logger = logging.getLogger('e-zero.check_writeable')
-    """This function is used to check if we can write to all paths in a list of paths"""
-    result = True
-    for path in paths:
-        result = result and check_writeable_helper(path,mode)
-    if not result:
-        if mode == 'RW':
-            print "ERROR: Not all folders are writeable"
-        elif mode == 'RO':
-            print "ERROR: Not all folders are read only"
-        for item in paths:
-            print item,
-            if check_writeable_helper(item):
-                print '- Read/Write'
-            else:
-                print '- Read Only'
-        exit(1)       
-    return result
-        
 def check_for_name_clashes(files, mode=False):
     logger = logging.getLogger('e-zero.check_for_name_clashes')
     unique_names = set()
@@ -189,7 +136,7 @@ def get_size(path):
     return result
     
 def bytes2human(n, format="%(value)i%(symbol)s"):
-    symbols = ('Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
+    symbols = (' Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
     prefix = {}
     for i, s in enumerate(symbols[1:]):
         prefix[s] = 1 << (i+1)*10
@@ -215,17 +162,13 @@ def create_drive_locks(roots):
         
 def list_files(arguments):
     logger = logging.getLogger('e-zero.list_files')
-    check_paths_exist(arguments['<source>'])
-    if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
+    precondition_checks(arguments['<source>'])
     files = find_files(arguments['<source>'])
     files.sort()
     for image in files: print image
     print_totals(files)
     check_for_name_clashes(files)  
 
-def precondition_checks(sources=[],destinations=[],force=False):
-    pass
-    
 def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue):
     logger = logging.getLogger('e-zero.copy_worker')
     try:
@@ -287,7 +230,6 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
                         source_locks[job_source_root].release()
                         #if all children die for unknown reason release all locks
                         if len(active_children()) < 1: 
-                            print 'WTF MATE'
                             #try to acquire each lock before releasing it.
                             for lock in source_locks: 
                                 source_locks[lock].acquire(False)
@@ -336,8 +278,7 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
 def verify(arguments):
     logger = logging.getLogger('e-zero.verify')
     """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
-    check_paths_exist(arguments['<source>'])
-    if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
+    precondition_checks(arguments['<source>'])
     files = find_files(arguments['<source>'])
     sorted_paths = get_roots(files)
     print_totals(files)
@@ -346,16 +287,32 @@ def verify(arguments):
 def consolidate(arguments):
     logger = logging.getLogger('e-zero.consolidate')
     """This is the main function to deal with the consolidate command"""
-    check_paths_exist(arguments['<source>'] + [arguments['--master']] + [arguments['--backup']])
-    if not arguments['--force']: check_writeable(arguments['<source>'],'RO')
-    source_files = find_files(arguments['<source>'])
-    sorted_sources = get_roots(source_files)
     destinations = [arguments['--master']]
     if arguments['--backup'] != None: destinations.append(arguments['--backup'])
-    check_writeable(destinations)
+    precondition_checks(arguments['<source>'],destinations)
+    source_files = find_files(arguments['<source>'])
+    sorted_sources = get_roots(source_files)
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
     dispatcher(True,not arguments['--copy'],source_files,destinations)
+
+def precondition_checks(sources=[],destinations=[]):
+    #needs to get message from function
+    safe_to_contiune = True
+    warnings = []
+    for source in sources:
+        if not os.path.isdir(source):
+            safe_to_contiune = False
+            warnings.append(source + " - does not exist")
+    for destination in destinations:
+        if not os.path.isdir(destination):
+            safe_to_contiune = False
+            warnings.append(destination + " - does not exist")
+    if not safe_to_contiune:
+        print
+        for item in warnings:
+            print item
+        exit(1)
 
 if __name__ == '__main__':
     logger = logging.getLogger('e-zero')
