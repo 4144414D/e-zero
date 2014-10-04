@@ -4,19 +4,21 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
+  e-zero list <source>... [-v]
   e-zero verify <source>... [-v]
   e-zero consolidate <source>... --master=<path> [--backup=<path>] [-cv]
-  e-zero list <source>... [-v]
+  e-zero reacquire <source>... --master=<path> --level=<n> [-b=<path>] [-cv]
   e-zero --version 
   e-zero --help
 
 Options:
-  -h, --help               Show this screen.
+  -h, --help              Show this screen.
   --version               Show the version.
   -c, --copy              Only copy the files, do not verify them.
   -m PATH, --master PATH  The master path for consolidation. 
   -b PATH, --backup PATH  The backup path for consolidation.
   -v, --verbose           Prints verbose log file for debugging. 
+  -l n, --level n         Compression level (0=none, 1=fastest, ... 9=best).
 """
 VERSION="BETA 0.0.3"
 
@@ -169,15 +171,50 @@ def list_files(arguments):
     print_totals(files)
     check_for_name_clashes(files)  
 
-def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue):
+def run_command(command):
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p.wait()
+    return iter(p.stdout.readline, b'')
+    
+def reacquire_command(image_file,job_dest,level):
+    #This function is a bit of a hack and needs cleaning up
+    image_info = run_command('ftkimager --print-info "' + image_file + '"')
+    for line in image_info:
+        if line[1:12] == "Case number":
+            case_number = line[14:].replace('"',"''").replace('\r',"").replace('\n',"")
+        elif line[1:16] == "Evidence number":
+            evidence_number = line[18:].replace('"',"''").replace('\r',"").replace('\n',"")
+        elif line[1:9] == "Examiner":
+            examiner = line[11:].replace('"',"''").replace('\r',"").replace('\n',"")
+        elif line[1:6] == "Notes":
+            notes = line[8:].replace('"',"''").replace('\r',"").replace('\n',"")
+        elif line[1:19] == "Unique description":
+            unique_description = line[21:].replace('"',"''").replace('\r',"").replace('\n',"")
+    command = 'ftkimager "' + image_file + '" "' + job_dest + '" --e01 --frag 1G --compress ' + level
+    command = command  + ' --case-number "' + case_number
+    command = command  + '" --evidence-number "' + evidence_number
+    command = command  + '" --examiner "' + examiner
+    command = command  + '" --notes "' + notes
+    command = command  + '" --description "' + unique_description + '"'
+    return command
+    
+def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue,level=False):
     logger = logging.getLogger('e-zero.copy_worker')
     try:
         null = open(os.devnull,'w')
         source_path = os.path.dirname(job_source)
         destination_path = os.path.dirname(job_dest)
-        print time.strftime('%Y-%m-%d %H:%M:%S'),
-        print 'xcopy "' + source_path + '" "' + destination_path + '" /SYIQ'
-        result = subprocess.call('xcopy "%s" "%s" /SYIQ' % (source_path, destination_path), stdout=null, stderr=null)
+        if level:
+            command = reacquire_command(job_source,job_dest[:-4],level)
+            print time.strftime('%Y-%m-%d %H:%M:%S'),
+            print command
+            if not os.path.exists(destination_path):
+                os.makedirs(destination_path)
+            result = subprocess.call(command, stdout=null, stderr=null)
+        else:
+            print time.strftime('%Y-%m-%d %H:%M:%S'),
+            print 'xcopy "' + source_path + '" "' + destination_path + '" /SYIQ'
+            result = subprocess.call('xcopy "%s" "%s" /SYIQ' % (source_path, destination_path), stdout=null, stderr=null)
         results_queue.put(['copy',result, job_dest])
     except:
         results_queue.put(['copy',-1, job_dest]) 
@@ -198,7 +235,7 @@ def verify_worker(dest_locks, job_dest, results_queue):
     finally:
         dest_locks[get_root(job_dest)].release()
     
-def dispatcher(copy = False, verify = False, sources=[], destinations = []):
+def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=False, level=0):
     logger = logging.getLogger('e-zero.dispatcher')
     source_roots = get_roots(sources)
     destination_roots = get_roots(destinations)
@@ -223,7 +260,10 @@ def dispatcher(copy = False, verify = False, sources=[], destinations = []):
                 job_dest_root = get_root(job[1])
                 if source_locks[job_source_root].acquire(False):
                     if dest_locks[job_dest_root].acquire(False):
-                        p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue))                
+                        if reacquire:
+                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue,level))                
+                        else:
+                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue))                
                         p.start()
                         copy_jobs.remove(job)
                     else:
@@ -295,11 +335,27 @@ def consolidate(arguments):
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
     dispatcher(True,not arguments['--copy'],source_files,destinations)
+    
+def reacquire(arguments):
+    logger = logging.getLogger('e-zero.reacquire')
+    """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
+    destinations = [arguments['--master']]
+    if arguments['--backup'] != None: destinations.append(arguments['--backup'])
+    precondition_checks(arguments['<source>'],destinations,arguments['--level'])
+    source_files = find_files(arguments['<source>'])
+    sorted_sources = get_roots(source_files)
+    check_for_name_clashes(source_files,True)
+    print_totals(source_files,destinations)
+    dispatcher(True,not arguments['--copy'],source_files,destinations,True,arguments['--level'])
 
-def precondition_checks(sources=[],destinations=[]):
+def precondition_checks(sources=[],destinations=[],level=""):
     #needs to get message from function
     safe_to_contiune = True
     warnings = []
+    levels = ['0','1','2','3','4','5','6','7','8','9']
+    if level not in levels:
+        safe_to_contiune = False
+        warnings.append(level + " - is not a correct compression level")
     for source in sources:
         if not os.path.isdir(source):
             safe_to_contiune = False
@@ -337,6 +393,8 @@ if __name__ == '__main__':
         verify(arguments)
     elif arguments['consolidate']:
         consolidate(arguments)
+    elif arguments['reacquire']:
+        reacquire(arguments)
     elif arguments['list']:
         list_files(arguments)
     else:
