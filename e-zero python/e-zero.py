@@ -348,7 +348,7 @@ def reacquire(arguments):
     print_totals(source_files,destinations)
     dispatcher(True,not arguments['--copy'],source_files,destinations,True,arguments['--level'])
 
-def precondition_checks(sources=[],destinations=[],level=""):
+def precondition_checks(sources=[],destinations=[],level="0"):
     #needs to get message from function
     safe_to_contiune = True
     warnings = []
