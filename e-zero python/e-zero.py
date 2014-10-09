@@ -271,6 +271,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                         #if all children die for unknown reason release all locks
                         if len(active_children()) < 1: 
                             #try to acquire each lock before releasing it.
+                            print 'All children died! Starting new process.'
                             for lock in source_locks: 
                                 source_locks[lock].acquire(False)
                                 source_locks[lock].release()
@@ -292,7 +293,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                     verify_jobs.remove(job)
                     #if all children die for unknown reason release all locks
                 if len(active_children()) < 1: 
-                    print 'WTF MATE'
+                    print 'All children died! Starting new process.'
                     for lock in dest_locks:
                         dest_locks[lock].acquire(False)
                         dest_locks[lock].release()
