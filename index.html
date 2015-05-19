@@ -20,7 +20,7 @@
     <header>
       <div class="inner">
         <h1>e-zero</h1>
-        <h2>Manage e01 files. Consolidate after a collection, duplicate, and verifiy. </h2>
+        <h2>Helps manage e01 forensic images.</h2>
         <a href="https://github.com/4144414D/e-zero" class="button"><small>View project on</small> GitHub</a>
       </div>
     </header>
@@ -29,37 +29,72 @@
       <div class="inner clearfix">
         <section id="main-content">
           <h1>
-<a id="e-zero" class="anchor" href="#e-zero" aria-hidden="true"><span class="octicon octicon-link"></span></a>e-zero</h1>
+<a id="intro" class="anchor" href="#intro" aria-hidden="true"><span class="octicon octicon-link"></span></a>Intro</h1>
 
-<p>Manage e01 files. Consolidate after a collection, duplicate, and verify. </p>
+<p>e-zero is a tool designed to save you time when dealing with large numbers of forensic images. It automates the use of FTK Imager CLI from AccessData to move around images and verify them.</p>
 
-<p>Requires python2.7, docopt, and ftk imager CLI.</p>
+<p>It's designed to run in parallel as much as possible, but it'll only read or write one file at a time from a disk which means you get the fastest possible disk-to-disk transfer speed.</p>
+
+<h2>
+<a id="useage" class="anchor" href="#useage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Useage</h2>
+<p>Currently e-zero is a command line only tool, the following examples show how to use it. If there is interest in a GUI let me know and I'll see what I can do. </p>
+
+<p><b>You</b>: Adam I don't care about how to use it, just tell me how to install the bloody thing.<br />
+<b>Me</b>: Just <a href="#installing">click here</a> and jump to the installing section</p>
+
+<p>e-zero uses <a href="LINK TO DOCOPT">docopt</a> to bring you a simple command line. Just use --help if you need to know the commands you can use. To get you started here are some examples:</p>
+
+<!------------------------------------------------------------------------------>
+<h3><a id="useage-verify" class="anchor" href="#useage-verify" aria-hidden="true"><span class="octicon octicon-link"></span></a>Verifying Images</h3>
+<p>Let's pretend you have 3 SANs and you store terrabytes of data on them. You had a power cut and are worried that some of the images may have been corrupted, with one command from e-zero you can verify them all.</p>
+
+<pre><code>e-zero verify "\\SAN1\Casework" "\\SAN2\Casework" "X:\Internal HR Images"</code></pre>
+
+<p>There is no limit to the number of images or sources you can ask e-zero to verify, the more you have the longer it'll take. It'll run as fast as your machine will go.<p>
+
+<!------------------------------------------------------------------------------>
+<h3><a id="useage-consolidate" class="anchor" href="#useage-consolidate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consolidating Images</h3>
+<p>So this time you were on a dawn raid, imaged 10 computers, and used 6 hard disks in the process. Your standard operating procedure is to copy everything to one disk and keep a backup on the NAS. Sounds like hassle, or maybe you just palm it off to the new guy?</p>
+
+<p>With e-zero you can give it all of your sources and leave it to take care of the mess for you. Every image is copied to a folder based on the image basename keeping it nice and tidy too.</p>
+
+<p>The example below takes all of the e01 images on drive letters E, F. G, H, I, and J and makes two verified copies of the images. One copy goes to the T drive and the other is stored on the NAS.</p>
+
+<pre><code>e-zero consolidate E: F: G: H: I: J: --master=T:\Evidence --backup="\\NAS\Backup Folder"</code></pre>
+
+<!------------------------------------------------------------------------------>
+<h3><a id="useage-reacquire" class="anchor" href="#useage-reacquire" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reacquiring Images</h3>
+
+<p>Further down the line and you need to save some space. You've got all your images on your scratch disks and want to copy them off to something smaller for storage. You can use e-zero to reacquire the images with any compression level you like (P.S. if you're reading this you want 9, maximum compression).</p>
+
+<p>All the images are reacquired with the new compression level and verified, and as it's FTK Imager CLI that does the heavy lifting you'll get a log file you're used to.</p>
+
+<pre><code>e-zero reacquire S: --master=T:\Evidence --level=9</code></pre>
 
 <h2>
 <a id="installing" class="anchor" href="#installing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installing</h2>
+<p>e-zero is pretty simple to install, but without FTK Imager CLI it won't do anything useful. I didn't make FTK Imager CLI so I can't just go about giving it out, you have to do that bit on your own. Once you've got it downloaded you need to update your system path variable so that e-zero can use it too.</p>
+<p>So basically:<br />
+1) Download and install <a href="LINK TO INSTALLER">e-zero</a><br />
+2) Download the FTK Imager CLI from AccessData <a href="http://www.accessdata.com/support/product-downloads">http://www.accessdata.com/support/product-downloads</a><br />
+3) Make FTK Imager CLI available in PATH. If you're unsure on how to do this please follow <a href="LINK TO GUIDE">this guide</a></p>
 
-<p>1) Download and install python2.7 <a href="https://www.python.org/download">https://www.python.org/download</a></p>
+<p>If you're still having issues getting it going send me an e-mail and I can see if I can help.</p>
 
-<p>2) Download and install docopt <a href="https://github.com/docopt/docopt">https://github.com/docopt/docopt</a></p>
 
-<p>3) Download FTK Imager CLI <a href="http://www.accessdata.com/support/product-downloads">http://www.accessdata.com/support/product-downloads</a></p>
+<h2>
+<a id="bugs" class="anchor" href="#bugs" aria-hidden="true"><span class="octicon octicon-link"></span></a>Bugs</h2>
+<p>If you find a bug in e-zero, Let me know! That way I can fix it. If you have a GitHub account you can raise an issue, but if you don't you can just send me an email and I'll see what I can do; adam [at] nucode.co.uk</p>
 
-<p>4) Make FTK Imager CLI available in PATH. Either:</p>
-
-<pre><code>a) Simple copy and paste all files for FTK Imager CLI in C:\Windows
-
-b) Modify your PATH variable to include FTK Imager CLI.
-</code></pre>
         </section>
-
         <aside id="sidebar">
+			<a href="https://github.com/4144414D/LINK TO FUCKING INSTALLER" class="button">
+            <small>Download</small>
+            Installer
+          </a>
           <a href="https://github.com/4144414D/e-zero/zipball/master" class="button">
             <small>Download</small>
-            .zip file
-          </a>
-          <a href="https://github.com/4144414D/e-zero/tarball/master" class="button">
-            <small>Download</small>
-            .tar.gz file
+            Source code
           </a>
 
           <p class="repo-owner"><a href="https://github.com/4144414D/e-zero"></a> is maintained by <a href="https://github.com/4144414D">4144414D</a>.</p>
@@ -68,7 +103,5 @@ b) Modify your PATH variable to include FTK Imager CLI.
         </aside>
       </div>
     </div>
-
-  
   </body>
 </html>
