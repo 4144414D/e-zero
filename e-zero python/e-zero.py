@@ -4,10 +4,10 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
-  e-zero list <source>... [-v]
-  e-zero verify <source>... [-v]
-  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-cv]
-  e-zero reacquire <source>... --master=<path> --level=<n> [-b=<path>] [-cv]
+  e-zero list <source>...
+  e-zero verify <source>... 
+  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-c]
+  e-zero reacquire <source>... --master=<path> --level=<n> [-b=<path>] [-c]
   e-zero --version 
   e-zero --help
 
@@ -17,10 +17,9 @@ Options:
   -c, --copy              Only copy the files, do not verify them.
   -m PATH, --master PATH  The master path for consolidation. 
   -b PATH, --backup PATH  The backup path for consolidation.
-  -v, --verbose           Prints verbose log file for debugging. 
   -l n, --level n         Compression level (0=none, 1=fastest, ... 9=best).
 """
-VERSION="BETA 0.0.3"
+VERSION="24-May-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
