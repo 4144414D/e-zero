@@ -29,7 +29,9 @@ import subprocess
 import time
 import sys
 import shutil
-import logging 
+import logging
+#add support for cxfreeze to create windows exe
+from multiprocessing import freeze_support
 
 def print_list(name,list_data):
     logger = logging.getLogger('e-zero.print_list')
@@ -371,21 +373,22 @@ def precondition_checks(sources=[],destinations=[],level="0"):
         exit(1)
 
 if __name__ == '__main__':
+    freeze_support()
     logger = logging.getLogger('e-zero')
     arguments = docopt(__doc__, version=VERSION)
-    if arguments['--verbose']:
-        print "Verbose mode is not implemented yet.... watch this space"
-        logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('processing.log')
-        fh.setLevel(logging.DEBUG)
-        fh_formatter = logging.Formatter('%(asctime)-5s - %(name)-30s - %(message)s')
-        fh.setFormatter(fh_formatter)
-        #logger.addHandler(fh)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
-        ch_formatter = logging.Formatter('%(asctime)s %(message)s')
-        ch.setFormatter(ch_formatter)
-        #logger.addHandler(ch)
+    #if arguments['--verbose']:
+    #    print "Verbose mode is not implemented yet.... watch this space"
+    #    logger.setLevel(logging.DEBUG)
+    #    fh = logging.FileHandler('processing.log')
+    #    fh.setLevel(logging.DEBUG)
+    #    fh_formatter = logging.Formatter('%(asctime)-5s - %(name)-30s - %(message)s')
+    #    fh.setFormatter(fh_formatter)
+    #    #logger.addHandler(fh)
+    #    ch = logging.StreamHandler()
+    #    ch.setLevel(logging.INFO)
+    #    ch_formatter = logging.Formatter('%(asctime)s %(message)s')
+    #    ch.setFormatter(ch_formatter)
+    #    #logger.addHandler(ch)
     logger.debug("Now checking that FTK Imager is installed")
     logger.debug("Users arguments are:\n" + str(arguments))
     check_dependency('ftkimager.exe --list-drives','FTK Imager CLI',0)
@@ -400,4 +403,3 @@ if __name__ == '__main__':
     else:
         print 'Something went wrong, these values will help with debugging:'
         print arguments
-    exit()
