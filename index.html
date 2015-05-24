@@ -36,7 +36,7 @@
 <p>It's designed to run in parallel as much as possible, but it'll only read or write one file at a time from a disk which means you get the fastest possible disk-to-disk transfer speed.</p>
 
 <h2>
-<a id="useage" class="anchor" href="#useage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Useage</h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
 <p>Currently e-zero is a command line only tool, the following examples show how to use it. If there is interest in a GUI let me know and I'll see what I can do. </p>
 
 <p><b>You</b>: Adam I don't care about how to use it, just tell me how to install the bloody thing.<br />
@@ -45,7 +45,7 @@
 <p>e-zero uses <a href="LINK TO DOCOPT">docopt</a> to bring you a simple command line. Just use --help if you need to know the commands you can use. To get you started there are some examples below.</p>
 
 <!------------------------------------------------------------------------------>
-<h3><a id="useage-verify" class="anchor" href="#useage-verify" aria-hidden="true"><span class="octicon octicon-link"></span></a>Verifying Images</h3>
+<h3><a id="usage-verify" class="anchor" href="#usage-verify" aria-hidden="true"><span class="octicon octicon-link"></span></a>Verifying Images</h3>
 <p>Let's pretend you have 3 SANs and you store terrabytes of data on them. You had a power cut and are worried that some of the images may have been corrupted, with one command from e-zero you can verify them all.</p>
 
 <pre><code>e-zero verify "\\SAN1\Casework" "\\SAN2\Casework" "X:\Internal HR Images"</code></pre>
@@ -53,7 +53,7 @@
 <p>There is no limit to the number of images or sources you can ask e-zero to verify, the more you have the longer it'll take. It'll run as fast as your machine will go.<p>
 
 <!------------------------------------------------------------------------------>
-<h3><a id="useage-consolidate" class="anchor" href="#useage-consolidate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consolidating Images</h3>
+<h3><a id="usage-consolidate" class="anchor" href="#usage-consolidate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consolidating Images</h3>
 <p>So this time you were on a dawn raid, imaged 10 computers, and used 6 hard disks in the process. Your standard operating procedure is to copy everything to one disk and keep a backup on the NAS. Sounds like hassle, or maybe you just palm it off to the new guy?</p>
 
 <p>With e-zero you can give it all of your sources and leave it to take care of the mess for you. Every image is copied to a folder based on the image basename keeping it nice and tidy too.</p>
@@ -63,7 +63,7 @@
 <pre><code>e-zero consolidate E: F: G: H: I: J: --master=T:\Evidence --backup="\\NAS\Backup Folder"</code></pre>
 
 <!------------------------------------------------------------------------------>
-<h3><a id="useage-reacquire" class="anchor" href="#useage-reacquire" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reacquiring Images</h3>
+<h3><a id="usage-reacquire" class="anchor" href="#usage-reacquire" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reacquiring Images</h3>
 
 <p>Further down the line and you need to save some space. You've got all your images on your scratch disks and want to copy them off to something smaller for storage. You can use e-zero to reacquire the images with any compression level you like (P.S. if you're reading this you want 9, maximum compression).</p>
 
