@@ -191,6 +191,7 @@ def reacquire_command(image_file,job_dest,level):
             notes = line[8:].replace('"',"''").replace('\r',"").replace('\n',"")
         elif line[1:19] == "Unique description":
             unique_description = line[21:].replace('"',"''").replace('\r',"").replace('\n',"")
+            if unique_description == "": unique_description = os.path.basename(image_file)
     command = 'ftkimager "' + image_file + '" "' + job_dest + '" --e01 --frag 1G --compress ' + level
     command = command  + ' --case-number "' + case_number
     command = command  + '" --evidence-number "' + evidence_number

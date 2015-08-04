@@ -31,7 +31,7 @@ ChangesEnvironment=true
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: modifypath; Description: Add application directory to your environmental path; Flags: unchecked
+Name: modifypath; Description: Add application directory to your environmental path
 
 [Code]
 const 
@@ -49,6 +49,11 @@ end;
 Source: "C:\Users\Adam\Documents\GitHub\e-zero\e-zero python\dist\e-zero.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\Adam\Documents\GitHub\e-zero\e-zero python\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[Registry]
+Root: HKCR; Subkey: "Directory\shell\e-zero verify"; Flags: uninsdeletekeyifempty
+Root: HKCR; Subkey: "Directory\shell\e-zero verify\command"; ValueType: string; ValueData: "cmd /c ""echo ""%1"" & e-zero verify ""%1"" & pause"""
+
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

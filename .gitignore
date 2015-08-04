@@ -52,3 +52,5 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+#cx_freeze script
+build.bat
