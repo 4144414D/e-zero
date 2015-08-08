@@ -19,7 +19,7 @@ Options:
   -b PATH, --backup PATH  The backup path for consolidation.
   -l n, --level n         Compression level (0=none, 1=fastest, ... 9=best).
 """
-VERSION="24-May-2015"
+VERSION="08-Aug-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
