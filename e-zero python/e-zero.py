@@ -6,20 +6,19 @@ Email:adam@nucode.co.uk
 Usage:
   e-zero list <source>...
   e-zero verify <source>... 
-  e-zero consolidate <source>... --master=<path> [--backup=<path>] [-c]
-  e-zero reacquire <source>... --master=<path> --level=<n> [-b=<path>] [-c]
+  e-zero consolidate <source>... (--destination=<path>...) [-c]
+  e-zero reacquire <source>... (--destination=<path>...) --level=<n> [-c]
   e-zero --version 
   e-zero --help
 
 Options:
-  -h, --help              Show this screen.
-  --version               Show the version.
-  -c, --copy              Only copy the files, do not verify them.
-  -m PATH, --master PATH  The master path for consolidation. 
-  -b PATH, --backup PATH  The backup path for consolidation.
-  -l n, --level n         Compression level (0=none, 1=fastest, ... 9=best).
+  -h, --help                   Show this screen.
+  --version                    Show the version.
+  -c, --copy                   Only copy the files, do not verify them.
+  -d PATH, --destination PATH  A destination for consolidation.
+  -l n, --level n              Compression level (0=none, 1=fastest, ... 9=best).
 """
-VERSION="08-Aug-2015"
+VERSION="09-Aug-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -191,7 +190,7 @@ def reacquire_command(image_file,job_dest,level):
             notes = line[8:].replace('"',"''").replace('\r',"").replace('\n',"")
         elif line[1:19] == "Unique description":
             unique_description = line[21:].replace('"',"''").replace('\r',"").replace('\n',"")
-            if unique_description == "": unique_description = os.path.basename(image_file)
+            if unique_description in ["", " ", "untitled"]: unique_description = os.path.basename(image_file)
     command = 'ftkimager "' + image_file + '" "' + job_dest + '" --e01 --frag 1G --compress ' + level
     command = command  + ' --case-number "' + case_number
     command = command  + '" --evidence-number "' + evidence_number
@@ -330,8 +329,7 @@ def verify(arguments):
 def consolidate(arguments):
     logger = logging.getLogger('e-zero.consolidate')
     """This is the main function to deal with the consolidate command"""
-    destinations = [arguments['--master']]
-    if arguments['--backup'] != None: destinations.append(arguments['--backup'])
+    destinations = arguments['--destination']
     precondition_checks(arguments['<source>'],destinations)
     source_files = find_files(arguments['<source>'])
     sorted_sources = get_roots(source_files)
@@ -342,8 +340,7 @@ def consolidate(arguments):
 def reacquire(arguments):
     logger = logging.getLogger('e-zero.reacquire')
     """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
-    destinations = [arguments['--master']]
-    if arguments['--backup'] != None: destinations.append(arguments['--backup'])
+    destinations = arguments['--destination']
     precondition_checks(arguments['<source>'],destinations,arguments['--level'])
     source_files = find_files(arguments['<source>'])
     sorted_sources = get_roots(source_files)

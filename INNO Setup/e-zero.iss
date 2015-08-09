@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "e-zero"
-#define MyAppVersion "08-Aug-2015"
+#define MyAppVersion "09-Aug-2015"
 #define MyAppPublisher "Adam Swann"
 #define MyAppURL "https://4144414d.github.io/e-zero/"
 #define MyAppExeName "e-zero.exe"
@@ -31,7 +31,8 @@ ChangesEnvironment=true
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: modifypath; Description: Add application directory to your environmental path
+Name: modifypath; Description: "Add application directory to your environmental path"
+Name: ContextMenu; Description: "Add right click context menu to verify all images within a directory"
 
 [Code]
 const 
@@ -51,14 +52,13 @@ Source: "C:\Users\Adam\Documents\GitHub\e-zero\e-zero python\dist\*"; DestDir: "
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]
-Root: HKCR; Subkey: "Directory\shell\e-zero verify"; Flags: uninsdeletekeyifempty
-Root: HKCR; Subkey: "Directory\shell\e-zero verify\command"; ValueType: string; ValueData: "cmd /c ""echo ""%1"" & e-zero verify ""%1"" & pause"""
+Root: HKCR; Subkey: "Directory\shell\e-zero verify"; Flags: uninsdeletekey; Tasks: ContextMenu
+Root: HKCR; Subkey: "Directory\shell\e-zero verify\command"; ValueType: string; ValueData: "cmd /c ""echo ""%1"" & e-zero verify ""%1"" & pause"""; Tasks: ContextMenu
 
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
-[Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
+; [Run]
+; Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
