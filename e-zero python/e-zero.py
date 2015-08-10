@@ -18,7 +18,7 @@ Options:
   -d PATH, --destination PATH  A destination for consolidation.
   -l n, --level n              Compression level (0=none, 1=fastest, ... 9=best).
 """
-VERSION="09-Aug-2015"
+VERSION="10-Aug-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -65,7 +65,7 @@ def check_dependency(command,name,target):
     if result != target:
         print time.strftime('%Y-%m-%d %H:%M:%S'),
         print "ERROR: " + name + "in not installed or accessible from path."
-        exit(1)
+        sys.exit(1)
     
 def find_files_helper(path, pattern='*.e01'):
     logger = logging.getLogger('e-zero.find_files_helper')
@@ -125,7 +125,7 @@ def check_for_name_clashes(files, mode=False):
                 print "times"
         if mode:
             print "\nPlease remove or rename these images so that they are named uniquely"
-            exit(1)
+            sys.exit(1)
 
 def get_size(path):
     logger = logging.getLogger('e-zero.get_size')
@@ -368,7 +368,7 @@ def precondition_checks(sources=[],destinations=[],level="0"):
         print
         for item in warnings:
             print item
-        exit(1)
+        sys.exit(1)
 
 if __name__ == '__main__':
     freeze_support()
