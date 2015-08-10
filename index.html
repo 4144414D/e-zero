@@ -33,7 +33,7 @@
 
 <p>e-zero is a tool designed to save you time when dealing with large numbers of forensic images. It automates the use of FTK Imager CLI from AccessData to move around images and verify them.</p>
 
-<p>It's designed to run in parallel as much as possible, but it'll only read or write one file at a time from a disk which should meann you get the fastest possible disk-to-disk transfer speed.</p>
+<p>It's designed to run in parallel as much as possible, but it'll only read or write one file at a time from a disk which should mean you get the fastest possible disk-to-disk transfer speed.</p>
 
 <p><img src="images/example.png" alt="e-zero CLI example"></p>
 
@@ -47,18 +47,34 @@
 <p>e-zero uses <a href="http://docopt.org/">docopt</a> to bring you a simple command line. Just use --help if you need to know the commands you can use.
 
 <pre><code>Usage:
-  e-zero list &ltsource&gt...
-  e-zero verify &ltsource&gt... 
-  e-zero consolidate &ltsource&gt... --master=&ltpath&gt [--backup=&ltpath&gt] [-c]
-  e-zero reacquire &ltsource&gt... --master=&ltpath&gt --level=&ltn&gt [-b=&ltpath&gt] [-c]
-  e-zero --version 
-  e-zero --help
+ e-zero list &ltsource&gt...
+ e-zero verify &ltsource&gt...
+ e-zero consolidate &ltsource&gt... (--destination=&ltpath&gt...) [-c]
+ e-zero reacquire &ltsource&gt... (--destination=&ltpath&gt...) --level=&ltn&gt [-c]
+ e-zero --version
+ e-zero --help
+
+Options:
+ -h, --help                    Show this screen.
+ --version                     Show the version.
+ -c, --copy                    Only copy the files, do not verify them.
+ -d PATH, --destination PATH   A destination for consolidation.
+ -l n, --level n               Compression level (0=none, 1=fastest, ... 9=best).
 </pre></code>
 
+<!------------------------------------------------------------------------------>
+<h3><a id="usage-consolidate" class="anchor" href="#usage-consolidate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consolidating Images</h3>
+<p>Let's pretend you were on a dawn raid, imaged 10 computers, and used 6 hard disks in the process. Your standard operating procedure is to copy everything to one disk and keep a backup on the NAS. Sounds like hassle, or maybe you just palm it off to the new guy?</p>
+
+<p>With e-zero you can give it all of your sources and leave it to take care of the mess for you. Every image is copied to a folder based on the image basename keeping it nice and tidy too.</p>
+
+<p>The example below takes all of the e01 images on drive letters E, F. G, H, I, and J and makes two verified copies of the images. One copy goes to the T drive and the other is stored on the NAS.</p>
+
+<pre><code>e-zero consolidate E: F: G: H: I: J: --destination=T:\Evidence --destination="\\NAS\Backup Folder"</code></pre>
 
 <!------------------------------------------------------------------------------>
 <h3><a id="usage-verify" class="anchor" href="#usage-verify" aria-hidden="true"><span class="octicon octicon-link"></span></a>Verifying Images</h3>
-<p>Let's pretend you have 3 SANs and you store terabytes of data on them. You had a power cut and are worried that some of the images may have been corrupted, with one command from e-zero you can verify them all.</p>
+<p>So this time you have 3 SANs and you store terabytes of data on them. You had a power cut and are worried that some of the images may have been corrupted, with one command from e-zero you can verify them all.</p>
 
 <pre><code>e-zero verify "\\SAN1\Casework" "\\SAN2\Casework" "X:\Internal HR Images"</code></pre>
 
@@ -69,31 +85,23 @@
 <p><img src="images/right-click.png" alt="e-zero context menu"></p>
 
 <!------------------------------------------------------------------------------>
-<h3><a id="usage-consolidate" class="anchor" href="#usage-consolidate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consolidating Images</h3>
-<p>So this time you were on a dawn raid, imaged 10 computers, and used 6 hard disks in the process. Your standard operating procedure is to copy everything to one disk and keep a backup on the NAS. Sounds like hassle, or maybe you just palm it off to the new guy?</p>
-
-<p>With e-zero you can give it all of your sources and leave it to take care of the mess for you. Every image is copied to a folder based on the image basename keeping it nice and tidy too.</p>
-
-<p>The example below takes all of the e01 images on drive letters E, F. G, H, I, and J and makes two verified copies of the images. One copy goes to the T drive and the other is stored on the NAS.</p>
-
-<pre><code>e-zero consolidate E: F: G: H: I: J: --master=T:\Evidence --backup="\\NAS\Backup Folder"</code></pre>
-
-<!------------------------------------------------------------------------------>
 <h3><a id="usage-reacquire" class="anchor" href="#usage-reacquire" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reacquiring Images</h3>
 
 <p>Further down the line and you need to save some space. You've got all your images on your scratch disks and want to copy them off to something smaller for storage. You can use e-zero to reacquire the images with any compression level you like (P.S. if you're reading this you want 9, maximum compression).</p>
 
 <p>All the images are reacquired with the new compression level and verified, and as it's FTK Imager CLI that does the heavy lifting you'll get a log file you're used to.</p>
 
-<pre><code>e-zero reacquire S: --master=T:\Evidence --level=9</code></pre>
+<pre><code>e-zero reacquire S: --destination=T:\Evidence --level=9</code></pre>
 
 <h2>
 <a id="installing" class="anchor" href="#installing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installing</h2>
 <p>e-zero is pretty simple to install, but without FTK Imager CLI it won't do anything useful. I didn't make FTK Imager CLI so I can't just go about giving it out, you have to do that bit on your own. Once you've got it downloaded you need to update your system path variable so that e-zero can use it too.</p>
 <p>So basically:<br />
-1) Download and install <a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/08-Aug-2015/setup.exe">e-zero</a> (make sure to tick the option to update PATH)<br />
+1) Download and install <a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/09-Aug-2015/setup.exe">e-zero</a> (make sure to tick the option to update PATH)<br />
 2) Download the FTK Imager CLI from AccessData <a href="http://www.accessdata.com/support/product-downloads">http://www.accessdata.com/support/product-downloads</a><br />
 3) Make FTK Imager CLI available in PATH. If you're unsure on how to do this please follow <a href="http://www.computerhope.com/issues/ch000549.htm">this guide</a></p>
+
+<p>You can use the python script instead if the installer if you prefer by downloading the <a href="https://github.com/4144414D/e-zero/zipball/master">source code</a> instead.</p>
 
 <p>If you're still having issues getting it going send me an e-mail and I can see if I can help.</p>
 
@@ -135,7 +143,7 @@ SOFTWARE.
 </p>
         </section>
         <aside id="sidebar">
-			<a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/08-Aug-2015/setup.exe" class="button">
+			<a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/09-Aug-2015/setup.exe" class="button">
             <small>Download</small>
             Installer
           </a>
