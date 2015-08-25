@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "e-zero"
-#define MyAppVersion "10-Aug-2015"
+#define MyAppVersion "25-Aug-2015"
 #define MyAppPublisher "Adam Swann"
 #define MyAppURL "https://4144414d.github.io/e-zero/"
 #define MyAppExeName "e-zero.exe"

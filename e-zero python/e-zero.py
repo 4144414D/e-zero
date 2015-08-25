@@ -4,9 +4,9 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
-  e-zero list <source>...
+  e-zero list <source>... [-alx]
   e-zero verify <source>... 
-  e-zero consolidate <source>... (--destination=<path>...) [-c]
+  e-zero consolidate <source>... (--destination=<path>...) [-calx]
   e-zero reacquire <source>... (--destination=<path>...) --level=<n> [-c]
   e-zero --version 
   e-zero --help
@@ -16,9 +16,18 @@ Options:
   --version                    Show the version.
   -c, --copy                   Only copy the files, do not verify them.
   -d PATH, --destination PATH  A destination for consolidation.
-  -l n, --level n              Compression level (0=none, 1=fastest, ... 9=best).
+  -r n, --level n              Compression level (0=none, 1=fast, ... 9=best).
+  -a, --ad1                    Also copy ad1 images.
+  -l, --l01                    Also copy L01 images.
+  -x, --ex01                   Also copy Ex01 images.
+
+Note:
+  FTKi CLI does not support the verification of ad1, L01, or Ex01 images. As 
+  such  e-zero is only able to copy these files and cannot verify them. Please
+  let me know if you are aware of a command line tool that can verify these 
+  formats.
 """
-VERSION="10-Aug-2015"
+VERSION="25-Aug-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -36,7 +45,7 @@ def print_list(name,list_data):
     logger = logging.getLogger('e-zero.print_list')
     print
     print name
-    for item in list_data:
+    for item in sorted(list_data):
         print item
 
 def print_totals(files,sorted_dest=False):
@@ -166,6 +175,9 @@ def list_files(arguments):
     logger = logging.getLogger('e-zero.list_files')
     precondition_checks(arguments['<source>'])
     files = find_files(arguments['<source>'])
+    if arguments['--ad1']: files = files + find_files(arguments['<source>'],'*.ad1')
+    if arguments['--l01']: files = files + find_files(arguments['<source>'],'*.l01')
+    if arguments['--ex01']: files = files + find_files(arguments['<source>'],'*.ex01')
     files.sort()
     for image in files: print image
     print_totals(files)
@@ -287,6 +299,11 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
         while verify_jobs:
             for job in verify_jobs:
                 job_dest = job
+                if fnmatch.filter([job_dest], '*.e01') == []:
+                    #if image is not an e01 file do not attempt to verify it
+                    verify_jobs.remove(job)
+                    results_queue.put(['unverifiable',0,job_dest])
+                    break
                 job_dest_root = get_root(job)
                 if dest_locks[job_dest_root].acquire(False):
                     p = Process(target = verify_worker, args = (dest_locks, job_dest, results_queue))                
@@ -304,6 +321,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
     verified = []
     failed_to_verify = []
     failed_to_copy = []
+    unverifiable = []
     while not results_queue.empty():
         result = results_queue.get()
         if (result[0] == 'copy') and (result[1] != 0):
@@ -312,11 +330,14 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
             if result[1] == 0:
                 verified.append(result[2])
             else:
-                failed_to_verify.append(result[2])      
+                failed_to_verify.append(result[2])   
+        elif result[0] == 'unverifiable':
+            unverifiable.append(result[2])
     if len(verified) > 0: print_list('VERIFIED Images', verified)
+    if len(unverifiable) > 0: print_list('UNVERIFIABLE Images', unverifiable)
     if len(failed_to_copy) > 0: print_list('FAILED to copy Images', failed_to_copy)
     if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
-
+    
 def verify(arguments):
     logger = logging.getLogger('e-zero.verify')
     """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
@@ -332,6 +353,9 @@ def consolidate(arguments):
     destinations = arguments['--destination']
     precondition_checks(arguments['<source>'],destinations)
     source_files = find_files(arguments['<source>'])
+    if arguments['--ad1']: source_files = source_files + find_files(arguments['<source>'],'*.ad1')
+    if arguments['--l01']: source_files = source_files + find_files(arguments['<source>'],'*.l01')
+    if arguments['--ex01']: source_files = source_files + find_files(arguments['<source>'],'*.ex01')
     sorted_sources = get_roots(source_files)
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
