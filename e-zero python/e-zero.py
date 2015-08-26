@@ -4,9 +4,9 @@ GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
-  e-zero list <source>... [-alx]
+  e-zero list <source>... [-alex]
   e-zero verify <source>... 
-  e-zero consolidate <source>... (--destination=<path>...) [-calx]
+  e-zero consolidate <source>... (--destination=<path>...) [-calex]
   e-zero reacquire <source>... (--destination=<path>...) --level=<n> [-c]
   e-zero --version 
   e-zero --help
@@ -19,15 +19,16 @@ Options:
   -r n, --level n              Compression level (0=none, 1=fast, ... 9=best).
   -a, --ad1                    Also copy ad1 images.
   -l, --l01                    Also copy L01 images.
-  -x, --ex01                   Also copy Ex01 images.
+  -e, --ex01                   Also copy Ex01 images.
+  -x, --lx01                   Also copy Lx01 images.
 
 Note:
-  FTKi CLI does not support the verification of ad1, L01, or Ex01 images. As 
-  such  e-zero is only able to copy these files and cannot verify them. Please
-  let me know if you are aware of a command line tool that can verify these 
-  formats.
+  FTKi CLI does not support the verification of ad1, L01, Lx01, or Ex01 
+  images. As such  e-zero is only able to copy these files and cannot 
+  verify them. Please let me know if you are aware of a command line 
+  tool that can verify these formats.
 """
-VERSION="25-Aug-2015"
+VERSION="26-Aug-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -178,6 +179,7 @@ def list_files(arguments):
     if arguments['--ad1']: files = files + find_files(arguments['<source>'],'*.ad1')
     if arguments['--l01']: files = files + find_files(arguments['<source>'],'*.l01')
     if arguments['--ex01']: files = files + find_files(arguments['<source>'],'*.ex01')
+    if arguments['--lx01']: source_files = files + find_files(arguments['<source>'],'*.lx01')
     files.sort()
     for image in files: print image
     print_totals(files)
@@ -260,7 +262,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
         if verify: destinations_to_verify = []
         for source in sources: #create jobs that need to run
             basename = os.path.basename(source)
-            folder_name = basename[:-4]
+            folder_name = basename
             for destination in destinations:
                 destination_filename = os.path.join(destination,folder_name,basename)
                 copy_jobs.append([source,destination_filename])
@@ -356,6 +358,7 @@ def consolidate(arguments):
     if arguments['--ad1']: source_files = source_files + find_files(arguments['<source>'],'*.ad1')
     if arguments['--l01']: source_files = source_files + find_files(arguments['<source>'],'*.l01')
     if arguments['--ex01']: source_files = source_files + find_files(arguments['<source>'],'*.ex01')
+    if arguments['--lx01']: source_files = source_files + find_files(arguments['<source>'],'*.lx01')
     sorted_sources = get_roots(source_files)
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
