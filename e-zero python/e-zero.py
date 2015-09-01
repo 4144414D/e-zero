@@ -28,7 +28,7 @@ Note:
   verify them. Please let me know if you are aware of a command line 
   tool that can verify these formats.
 """
-VERSION="26-Aug-2015"
+VERSION="01-Sep-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -39,6 +39,8 @@ import time
 import sys
 import shutil
 import logging
+import tempfile
+import re
 #add support for cxfreeze to create windows exe
 from multiprocessing import freeze_support
 
@@ -242,11 +244,15 @@ def verify_worker(dest_locks, job_dest, results_queue):
     try:
         null = open(os.devnull,'w')
         print time.strftime('%Y-%m-%d %H:%M:%S'),
+        
+        tfile = tempfile.TemporaryFile()
         print 'ftkimager.exe --verify "' + job_dest + '"' 
-        result = subprocess.call('ftkimager.exe --verify "' + job_dest + '"', stdout=null, stderr=null)
-        results_queue.put(['verify',result, job_dest])
+        result = subprocess.call('ftkimager.exe --verify "' + job_dest + '"', stdout=tfile, stderr=null)
+        tfile.seek(0)
+        hash_results = tfile.read()
+        results_queue.put(['verify',result, job_dest,hash_results])
     except:
-        results_queue.put(['verify',-1, job_dest])
+        results_queue.put(['verify',-1, job_dest,""])
     finally:
         dest_locks[get_root(job_dest)].release()
     
@@ -321,9 +327,13 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
     while len(active_children()) != 0: time.sleep(0.1)    
     #deal with results queue
     verified = []
+    verified_md5_only = []
+    verified_sha1_only = []
     failed_to_verify = []
     failed_to_copy = []
     unverifiable = []
+    md5_regex = re.compile(r'\[MD5\].*?Verify result: (Mismatch|Match)', re.DOTALL)
+    sha1_regex = re.compile(r'\[SHA1\].*?Verify result: (Mismatch|Match)', re.DOTALL)
     while not results_queue.empty():
         result = results_queue.get()
         if (result[0] == 'copy') and (result[1] != 0):
@@ -332,10 +342,22 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
             if result[1] == 0:
                 verified.append(result[2])
             else:
-                failed_to_verify.append(result[2])   
+                md5_match = md5_regex.search(result[3])
+                sha1_match = sha1_regex.search(result[3])
+                if md5_match or sha1_match: 
+                    if md5_match.group(1) == 'Match': 
+                        verified_md5_only.append(result[2])
+                    elif sha1_match.group(1) == 'Match': 
+                        verified_sha1_only.append(result[2])                    
+                    else:
+                        failed_to_verify.append(result[2])   
+                else:
+                    failed_to_verify.append(result[2])   
         elif result[0] == 'unverifiable':
             unverifiable.append(result[2])
     if len(verified) > 0: print_list('VERIFIED Images', verified)
+    if len(verified_md5_only) > 0: print_list('VERIFIED (MD5 ONLY) Images', verified_md5_only)
+    if len(verified_sha1_only) > 0: print_list('VERIFIED (SHA1 ONLY) Images', verified_sha1_only)
     if len(unverifiable) > 0: print_list('UNVERIFIABLE Images', unverifiable)
     if len(failed_to_copy) > 0: print_list('FAILED to copy Images', failed_to_copy)
     if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
