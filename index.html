@@ -47,19 +47,23 @@
 <p>e-zero uses <a href="http://docopt.org/">docopt</a> to bring you a simple command line. Just use --help if you need to know the commands you can use.
 
 <pre><code>Usage:
- e-zero list &ltsource&gt...
- e-zero verify &ltsource&gt...
- e-zero consolidate &ltsource&gt... (--destination=&ltpath&gt...) [-c]
- e-zero reacquire &ltsource&gt... (--destination=&ltpath&gt...) --level=&ltn&gt [-c]
- e-zero --version
- e-zero --help
+  e-zero list &ltsource&gt... [-alex]
+  e-zero verify &ltsource&gt... 
+  e-zero consolidate &ltsource&gt... (--destination=&ltpath&gt...) [-calex]
+  e-zero reacquire &ltsource&gt... (--destination=&ltpath&gt...) --level=&ltn&gt [-c]
+  e-zero --version 
+  e-zero --help
 
 Options:
- -h, --help                    Show this screen.
- --version                     Show the version.
- -c, --copy                    Only copy the files, do not verify them.
- -d PATH, --destination PATH   A destination for consolidation.
- -l n, --level n               Compression level (0=none, 1=fastest, ... 9=best).
+  -h, --help                   Show this screen.
+  --version                    Show the version.
+  -c, --copy                   Only copy the files, do not verify them.
+  -d PATH, --destination PATH  A destination for consolidation.
+  -r n, --level n              Compression level (0=none, 1=fast, ... 9=best).
+  -a, --ad1                    Also copy ad1 images.
+  -l, --l01                    Also copy L01 images.
+  -e, --ex01                   Also copy Ex01 images.
+  -x, --lx01                   Also copy Lx01 images.
 </pre></code>
 
 <!------------------------------------------------------------------------------>
@@ -71,6 +75,10 @@ Options:
 <p>The example below takes all of the e01 images on drive letters E, F. G, H, I, and J and makes two verified copies of the images. One copy goes to the T drive and the other is stored on the NAS.</p>
 
 <pre><code>e-zero consolidate E: F: G: H: I: J: --destination=T:\Evidence --destination="\\NAS\Backup Folder"</code></pre>
+
+<p>Now if you have some ad1, L01, Ex01, or Lx01 images that you'd also like to copy you can add the -alex option to copy those too. They won't be verified by FTK Imager CLI as it doesn't support that.</p>
+
+<pre><code>e-zero consolidate E: F: G: H: I: J: --destination=T:\Evidence --destination="\\NAS\Backup Folder" -alex</code></pre>
 
 <!------------------------------------------------------------------------------>
 <h3><a id="usage-verify" class="anchor" href="#usage-verify" aria-hidden="true"><span class="octicon octicon-link"></span></a>Verifying Images</h3>
@@ -97,7 +105,7 @@ Options:
 <a id="installing" class="anchor" href="#installing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installing</h2>
 <p>e-zero is pretty simple to install, but without FTK Imager CLI it won't do anything useful. I didn't make FTK Imager CLI so I can't just go about giving it out, you have to do that bit on your own. Once you've got it downloaded you need to update your system path variable so that e-zero can use it too.</p>
 <p>So basically:<br />
-1) Download and install <a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/10-Aug-2015/setup.exe">e-zero</a> (make sure to tick the option to update PATH)<br />
+1) Download and install <a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/01-Sep-2015/setup.exe">e-zero</a> (make sure to tick the option to update PATH)<br />
 2) Download the FTK Imager CLI from AccessData <a href="http://www.accessdata.com/support/product-downloads">http://www.accessdata.com/support/product-downloads</a><br />
 3) Make FTK Imager CLI available in PATH. If you're unsure on how to do this please follow <a href="http://www.computerhope.com/issues/ch000549.htm">this guide</a></p>
 
@@ -143,7 +151,7 @@ SOFTWARE.
 </p>
         </section>
         <aside id="sidebar">
-			<a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/10-Aug-2015/setup.exe" class="button">
+			<a href="https://github.com/4144414D/e-zero/raw/master/INNO%20Setup/Installer/01-Sep-2015/setup.exe" class="button">
             <small>Download</small>
             Installer
           </a>
