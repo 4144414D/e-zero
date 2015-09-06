@@ -344,14 +344,16 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
             else:
                 md5_match = md5_regex.search(result[3])
                 sha1_match = sha1_regex.search(result[3])
-                if md5_match or sha1_match: 
+                part_verified = False
+                if md5_match:
                     if md5_match.group(1) == 'Match': 
                         verified_md5_only.append(result[2])
-                    elif sha1_match.group(1) == 'Match': 
-                        verified_sha1_only.append(result[2])                    
-                    else:
-                        failed_to_verify.append(result[2])   
-                else:
+                        part_verified = True
+                if sha1_match: 
+                    if sha1_match.group(1) == 'Match': 
+                        verified_sha1_only.append(result[2])    
+                        part_verified = True                         
+                if not part_verified:
                     failed_to_verify.append(result[2])   
         elif result[0] == 'unverifiable':
             unverifiable.append(result[2])
