@@ -5,22 +5,23 @@ Email:adam@nucode.co.uk
 
 Usage:
   e-zero list <source>... [-alex]
-  e-zero verify <source>...
-  e-zero consolidate <source>... (--destination=<path>...) [-calex]
+  e-zero verify <source>... [-h]
+  e-zero consolidate <source>... (--destination=<path>...) [-alex] [-c|-h]
   e-zero reacquire <source>... (--destination=<path>...) --level=<n> [-c]
   e-zero --version
   e-zero --help
 
 Options:
-  -h, --help                   Show this screen.
-  --version                    Show the version.
-  -c, --copy                   Only copy the files, do not verify them.
-  -d PATH, --destination PATH  A destination for consolidation.
-  -r n, --level n              Compression level (0=none, 1=fast, ... 9=best).
-  -a, --ad1                    Also copy ad1 images.
-  -l, --l01                    Also copy L01 images.
-  -e, --ex01                   Also copy Ex01 images.
-  -x, --lx01                   Also copy Lx01 images.
+  --help                        Show this screen.
+  --version                     Show the version.
+  -c, --copy                    Only copy the files, do not verify them.
+  -d PATH, --destination PATH   A destination for consolidation.
+  -r n, --level n               Compression level (0=none, 1=fast, ... 9=best).
+  -a, --ad1                     Also copy ad1 images.
+  -l, --l01                     Also copy L01 images.
+  -e, --ex01                    Also copy Ex01 images.
+  -x, --lx01                    Also copy Lx01 images.
+  -h, --hash-details            Also display hash details for verification.
 
 Note:
   FTKi CLI does not support the verification of ad1, L01, Lx01, or Ex01
@@ -215,7 +216,7 @@ def reacquire_command(image_file,job_dest,level):
     command = command  + '" --description "' + unique_description + '"'
     return command
 
-def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue,level=False):
+def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue,level=False,hash_details=False):
     logger = logging.getLogger('e-zero.copy_worker')
     try:
         null = open(os.devnull,'w')
@@ -256,7 +257,7 @@ def verify_worker(dest_locks, job_dest, results_queue):
     finally:
         dest_locks[get_root(job_dest)].release()
 
-def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=False, level=0):
+def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=False, level=0,hash_details=False):
     logger = logging.getLogger('e-zero.dispatcher')
     source_roots = get_roots(sources)
     destination_roots = get_roots(destinations)
@@ -339,22 +340,29 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
         if (result[0] == 'copy') and (result[1] != 0):
             failed_to_copy.append(result[2])
         elif result[0] == 'verify':
+            if hash_details:
+                if len(result[3]) > 0:
+                    hash_display_string = '\r\n'+result[3]
+                else:
+                    hash_display_string = '\r\n[Image Detection Failed]\r\n'
+            else:
+                hash_display_string = ""
             if result[1] == 0:
-                verified.append(result[2])
+                verified.append(result[2] + hash_display_strings)
             else:
                 md5_match = md5_regex.search(result[3])
                 sha1_match = sha1_regex.search(result[3])
                 part_verified = False
                 if md5_match:
                     if md5_match.group(1) == 'Match':
-                        verified_md5_only.append(result[2])
+                        verified_md5_only.append(result[2] + hash_display_string)
                         part_verified = True
                 if sha1_match:
                     if sha1_match.group(1) == 'Match':
-                        verified_sha1_only.append(result[2])
+                        verified_sha1_only.append(result[2] + hash_display_string)
                         part_verified = True
                 if not part_verified:
-                    failed_to_verify.append(result[2])
+                    failed_to_verify.append(result[2] + hash_display_string)
         elif result[0] == 'unverifiable':
             unverifiable.append(result[2])
     if len(verified) > 0: print_list('VERIFIED Images', verified)
@@ -371,7 +379,7 @@ def verify(arguments):
     files = find_files(arguments['<source>'])
     sorted_paths = get_roots(files)
     print_totals(files)
-    dispatcher(False,True,[],files)
+    dispatcher(False,True,[],files,hash_details=arguments['--hash-details'])
 
 def consolidate(arguments):
     logger = logging.getLogger('e-zero.consolidate')
@@ -386,7 +394,7 @@ def consolidate(arguments):
     sorted_sources = get_roots(source_files)
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
-    dispatcher(True,not arguments['--copy'],source_files,destinations)
+    dispatcher(True,not arguments['--copy'],source_files,destinations,hash_details=arguments['--hash-details'])
 
 def reacquire(arguments):
     logger = logging.getLogger('e-zero.reacquire')
