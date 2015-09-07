@@ -1,14 +1,14 @@
 #!/sorry/I/only/run/on/windows
 """
-GitHub:https://github.com/4144414D/e-zero 
+GitHub:https://github.com/4144414D/e-zero
 Email:adam@nucode.co.uk
 
 Usage:
   e-zero list <source>... [-alex]
-  e-zero verify <source>... 
+  e-zero verify <source>...
   e-zero consolidate <source>... (--destination=<path>...) [-calex]
   e-zero reacquire <source>... (--destination=<path>...) --level=<n> [-c]
-  e-zero --version 
+  e-zero --version
   e-zero --help
 
 Options:
@@ -23,12 +23,12 @@ Options:
   -x, --lx01                   Also copy Lx01 images.
 
 Note:
-  FTKi CLI does not support the verification of ad1, L01, Lx01, or Ex01 
-  images. As such  e-zero is only able to copy these files and cannot 
-  verify them. Please let me know if you are aware of a command line 
+  FTKi CLI does not support the verification of ad1, L01, Lx01, or Ex01
+  images. As such  e-zero is only able to copy these files and cannot
+  verify them. Please let me know if you are aware of a command line
   tool that can verify these formats.
 """
-VERSION="01-Sep-2015"
+VERSION="07-Sep-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -78,11 +78,11 @@ def check_dependency(command,name,target):
         print time.strftime('%Y-%m-%d %H:%M:%S'),
         print "ERROR: " + name + "in not installed or accessible from path."
         sys.exit(1)
-    
+
 def find_files_helper(path, pattern='*.e01'):
     logger = logging.getLogger('e-zero.find_files_helper')
     """This function is used to find the location of all files matching with a extension recursively inside the folder listed in path"""
-    matched_files = []      
+    matched_files = []
     for path, dirs, files in os.walk(os.path.abspath(path)):
         for filename in fnmatch.filter(files, pattern):
             matched_files.append(os.path.join(path, filename))
@@ -109,7 +109,7 @@ def get_roots(paths):
     for root in roots:
         roots_dict[root] = []
     return roots_dict
-        
+
 def check_for_name_clashes(files, mode=False):
     logger = logging.getLogger('e-zero.check_for_name_clashes')
     unique_names = set()
@@ -120,7 +120,7 @@ def check_for_name_clashes(files, mode=False):
     for unique_name in unique_names:
         clashes[unique_name] = 0
         sorted_unique_names.append(unique_name)
-    sorted_unique_names.sort()        
+    sorted_unique_names.sort()
     for f in files:
         basename = os.path.basename(f)
         clashes[basename] = clashes[basename] + 1
@@ -144,11 +144,11 @@ def get_size(path):
     result = 0
     base = path
     for f in os.listdir(path):
-        f = path + '/' + f 
+        f = path + '/' + f
         if os.path.isfile(f):
-            result = result + os.path.getsize(f) 
+            result = result + os.path.getsize(f)
     return result
-    
+
 def bytes2human(n, format="%(value)i%(symbol)s"):
     symbols = (' Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
     prefix = {}
@@ -173,7 +173,7 @@ def create_drive_locks(roots):
     for drive in roots:
         drive_locks[drive] = Lock()
     return drive_locks
-        
+
 def list_files(arguments):
     logger = logging.getLogger('e-zero.list_files')
     precondition_checks(arguments['<source>'])
@@ -185,13 +185,13 @@ def list_files(arguments):
     files.sort()
     for image in files: print image
     print_totals(files)
-    check_for_name_clashes(files)  
+    check_for_name_clashes(files)
 
 def run_command(command):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     p.wait()
     return iter(p.stdout.readline, b'')
-    
+
 def reacquire_command(image_file,job_dest,level):
     #This function is a bit of a hack and needs cleaning up
     image_info = run_command('ftkimager --print-info "' + image_file + '"')
@@ -214,7 +214,7 @@ def reacquire_command(image_file,job_dest,level):
     command = command  + '" --notes "' + notes
     command = command  + '" --description "' + unique_description + '"'
     return command
-    
+
 def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue,level=False):
     logger = logging.getLogger('e-zero.copy_worker')
     try:
@@ -234,19 +234,19 @@ def copy_worker(source_locks, dest_locks, job_source, job_dest, results_queue,le
             result = subprocess.call('xcopy "%s" "%s" /SYIQ' % (source_path, destination_path), stdout=null, stderr=null)
         results_queue.put(['copy',result, job_dest])
     except:
-        results_queue.put(['copy',-1, job_dest]) 
+        results_queue.put(['copy',-1, job_dest])
     finally:
         source_locks[get_root(job_source)].release()
         dest_locks[get_root(job_dest)].release()
-    
+
 def verify_worker(dest_locks, job_dest, results_queue):
     logger = logging.getLogger('e-zero.verify_worker')
     try:
         null = open(os.devnull,'w')
         print time.strftime('%Y-%m-%d %H:%M:%S'),
-        
+
         tfile = tempfile.TemporaryFile()
-        print 'ftkimager.exe --verify "' + job_dest + '"' 
+        print 'ftkimager.exe --verify "' + job_dest + '"'
         result = subprocess.call('ftkimager.exe --verify "' + job_dest + '"', stdout=tfile, stderr=null)
         tfile.seek(0)
         hash_results = tfile.read()
@@ -255,7 +255,7 @@ def verify_worker(dest_locks, job_dest, results_queue):
         results_queue.put(['verify',-1, job_dest,""])
     finally:
         dest_locks[get_root(job_dest)].release()
-    
+
 def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=False, level=0):
     logger = logging.getLogger('e-zero.dispatcher')
     source_roots = get_roots(sources)
@@ -263,7 +263,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
     source_locks = create_drive_locks(source_roots)
     dest_locks = create_drive_locks(destination_roots)
     results_queue = Queue()
-    if copy: 
+    if copy:
         copy_jobs = []
         if verify: destinations_to_verify = []
         for source in sources: #create jobs that need to run
@@ -282,18 +282,18 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                 if source_locks[job_source_root].acquire(False):
                     if dest_locks[job_dest_root].acquire(False):
                         if reacquire:
-                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue,level))                
+                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue,level))
                         else:
-                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue))                
+                            p = Process(target = copy_worker, args = (source_locks, dest_locks, job_source, job_dest, results_queue))
                         p.start()
                         copy_jobs.remove(job)
                     else:
                         source_locks[job_source_root].release()
                         #if all children die for unknown reason release all locks
-                        if len(active_children()) < 1: 
+                        if len(active_children()) < 1:
                             #try to acquire each lock before releasing it.
                             print 'All children died! Starting new process.'
-                            for lock in source_locks: 
+                            for lock in source_locks:
                                 source_locks[lock].acquire(False)
                                 source_locks[lock].release()
                             for lock in dest_locks:
@@ -301,7 +301,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                                 dest_locks[lock].release()
             time.sleep(0.1)
         if verify: destinations = destinations_to_verify
-    while len(active_children()) != 0: time.sleep(0.1)    
+    while len(active_children()) != 0: time.sleep(0.1)
     if verify:
         verify_jobs = destinations
         while verify_jobs:
@@ -314,17 +314,17 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                     break
                 job_dest_root = get_root(job)
                 if dest_locks[job_dest_root].acquire(False):
-                    p = Process(target = verify_worker, args = (dest_locks, job_dest, results_queue))                
+                    p = Process(target = verify_worker, args = (dest_locks, job_dest, results_queue))
                     p.start()
                     verify_jobs.remove(job)
                     #if all children die for unknown reason release all locks
-                if len(active_children()) < 1: 
+                if len(active_children()) < 1:
                     print 'All children died! Starting new process.'
                     for lock in dest_locks:
                         dest_locks[lock].acquire(False)
                         dest_locks[lock].release()
                 time.sleep(0.1)
-    while len(active_children()) != 0: time.sleep(0.1)    
+    while len(active_children()) != 0: time.sleep(0.1)
     #deal with results queue
     verified = []
     verified_md5_only = []
@@ -346,15 +346,15 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
                 sha1_match = sha1_regex.search(result[3])
                 part_verified = False
                 if md5_match:
-                    if md5_match.group(1) == 'Match': 
+                    if md5_match.group(1) == 'Match':
                         verified_md5_only.append(result[2])
                         part_verified = True
-                if sha1_match: 
-                    if sha1_match.group(1) == 'Match': 
-                        verified_sha1_only.append(result[2])    
-                        part_verified = True                         
+                if sha1_match:
+                    if sha1_match.group(1) == 'Match':
+                        verified_sha1_only.append(result[2])
+                        part_verified = True
                 if not part_verified:
-                    failed_to_verify.append(result[2])   
+                    failed_to_verify.append(result[2])
         elif result[0] == 'unverifiable':
             unverifiable.append(result[2])
     if len(verified) > 0: print_list('VERIFIED Images', verified)
@@ -363,7 +363,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
     if len(unverifiable) > 0: print_list('UNVERIFIABLE Images', unverifiable)
     if len(failed_to_copy) > 0: print_list('FAILED to copy Images', failed_to_copy)
     if len(failed_to_verify) > 0: print_list('FAILED to verify Images', failed_to_verify)
-    
+
 def verify(arguments):
     logger = logging.getLogger('e-zero.verify')
     """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
@@ -372,7 +372,7 @@ def verify(arguments):
     sorted_paths = get_roots(files)
     print_totals(files)
     dispatcher(False,True,[],files)
-        
+
 def consolidate(arguments):
     logger = logging.getLogger('e-zero.consolidate')
     """This is the main function to deal with the consolidate command"""
@@ -387,7 +387,7 @@ def consolidate(arguments):
     check_for_name_clashes(source_files,True)
     print_totals(source_files,destinations)
     dispatcher(True,not arguments['--copy'],source_files,destinations)
-    
+
 def reacquire(arguments):
     logger = logging.getLogger('e-zero.reacquire')
     """This is the main function to deal with the verify command. It calls dispatcher with sources as destinations."""
