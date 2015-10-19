@@ -25,11 +25,11 @@ Options:
 
 Note:
   FTKi CLI does not support the verification of ad1, L01, Lx01, or Ex01
-  images. As such  e-zero is only able to copy these files and cannot
+  images. As such e-zero is only able to copy these files and cannot
   verify them. Please let me know if you are aware of a command line
   tool that can verify these formats.
 """
-VERSION="07-Sep-2015"
+VERSION="19-Oct-2015"
 
 from multiprocessing import Process, Lock, active_children, Queue
 from docopt import docopt
@@ -150,16 +150,12 @@ def get_size(path):
             result = result + os.path.getsize(f)
     return result
 
-def bytes2human(n, format="%(value)i%(symbol)s"):
+def bytes2human(size):
     symbols = (' Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
-    prefix = {}
-    for i, s in enumerate(symbols[1:]):
-        prefix[s] = 1 << (i+1)*10
-    for symbol in reversed(symbols[1:]):
-        if n >= prefix[symbol]:
-            value = float(n) / prefix[symbol]
-            return format % locals()
-    return format % dict(symbol=symbols[0], value=n)
+    size = float(size)
+    for i in range(len(symbols)):
+        if size < 1024: return("%.2f %s" % (size, symbols[i]))
+        size = size / 1024
 
 def total_file_size(files):
     logger = logging.getLogger('e-zero.total_file_size')
@@ -348,7 +344,7 @@ def dispatcher(copy=False, verify=False, sources=[], destinations=[], reacquire=
             else:
                 hash_display_string = ""
             if result[1] == 0:
-                verified.append(result[2] + hash_display_strings)
+                verified.append(result[2] + hash_display_string)
             else:
                 md5_match = md5_regex.search(result[3])
                 sha1_match = sha1_regex.search(result[3])
